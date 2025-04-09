@@ -27,7 +27,6 @@ import {
 } from "recharts";
 import { InfoOutlined, TrendingUp } from "@mui/icons-material";
 import { motion } from "framer-motion";
-import { useAuth } from "../context/AuthContext";
 import { getBlogStats, getCategories } from "../services/blogService";
 
 const COLORS = [
@@ -58,7 +57,6 @@ interface PerformanceMetric {
 }
 
 function Analytics() {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
@@ -299,7 +297,7 @@ function Analytics() {
                       dataKey="value"
                       label
                     >
-                      {stats.categoryCounts.map((entry, index) => (
+                      {stats.categoryCounts.map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={COLORS[index % COLORS.length]}
@@ -339,7 +337,7 @@ function Analytics() {
                     value: stats.totalComments,
                     icon: <TrendingUp />,
                   },
-                ].map((metric, index) => (
+                ].map((metric, _) => (
                   <Grid item xs={6} key={metric.label}>
                     <Paper
                       elevation={3}

@@ -8,7 +8,26 @@ const { sendResetPasswordEmail } = require("../utils/email");
 const bcrypt = require("bcryptjs");
 const multer = require("multer");
 const cloudinary = require("../config/cloudinary");
-const upload = multer({ dest: "uploads/" });
+const crypto = require("crypto");
+const dbConnect = require("../utils/dbConnect");
+
+// Use memory storage instead of disk storage for Vercel compatibility
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// Middleware to ensure database connection for all routes
+router.use(async (req, res, next) => {
+  try {
+    await dbConnect();
+    next();
+  } catch (err) {
+    console.error("Database connection error in middleware:", err);
+    return res.status(503).json({
+      message: "Database connection unavailable",
+      status: "error",
+    });
+  }
+});
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -55,12 +74,18 @@ router.post(
       // Handle profile picture upload if provided
       if (req.file) {
         try {
-          const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: "blogverse/avatars",
-            width: 400,
-            height: 400,
-            crop: "fill",
-          });
+          // Upload buffer directly instead of file path
+          const result = await cloudinary.uploader.upload(
+            `data:${req.file.mimetype};base64,${req.file.buffer.toString(
+              "base64"
+            )}`,
+            {
+              folder: "blogverse/avatars",
+              width: 400,
+              height: 400,
+              crop: "fill",
+            }
+          );
           user.profilePicture = result.secure_url;
         } catch (uploadError) {
           console.error("Cloudinary upload error:", uploadError);
@@ -307,12 +332,17 @@ router.put(
       // Handle profile picture upload
       if (req.file) {
         try {
-          const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: "blogverse/avatars",
-            width: 400,
-            height: 400,
-            crop: "fill",
-          });
+          const result = await cloudinary.uploader.upload(
+            `data:${req.file.mimetype};base64,${req.file.buffer.toString(
+              "base64"
+            )}`,
+            {
+              folder: "blogverse/avatars",
+              width: 400,
+              height: 400,
+              crop: "fill",
+            }
+          );
           updateFields.profilePicture = result.secure_url;
         } catch (uploadError) {
           console.error("Cloudinary upload error:", uploadError);

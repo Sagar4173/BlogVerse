@@ -2,11 +2,26 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose"); // Add this line
-const User = require("../models/User"); // Ensure this path and model name are correct
+const mongoose = require("mongoose");
+const User = require("../models/User");
 const auth = require("../middleware/auth");
-const Blog = require("../models/Blog"); // Ensure this path and model name are correct
-const sendNotificationEmail = require("../utils/sendNotificationEmail"); // Corrected path
+const Blog = require("../models/Blog");
+const sendNotificationEmail = require("../utils/sendNotificationEmail");
+const dbConnect = require("../utils/dbConnect");
+
+// Middleware to ensure database connection for all routes
+router.use(async (req, res, next) => {
+  try {
+    await dbConnect();
+    next();
+  } catch (err) {
+    console.error("Database connection error in middleware:", err);
+    return res.status(503).json({
+      message: "Database connection unavailable",
+      status: "error",
+    });
+  }
+});
 
 // @route   POST api/users/register
 // @desc    Register a user

@@ -136,7 +136,10 @@ function UserProfile() {
       <Grid container spacing={4}>
         <Grid item xs={12} md={4}>
           <UserProfileCard
-            user={profile}
+            user={{
+              ...profile,
+              isFollowing: profile.isFollowing || false, // Ensure isFollowing is always a boolean
+            }}
             onFollowChange={(isFollowing) => {
               setProfile((prev) =>
                 prev

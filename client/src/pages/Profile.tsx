@@ -26,19 +26,20 @@ import {
   Language,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth"; // Updated import path
 import { toast } from "react-toastify";
 import { updateProfile } from "../api/profile";
 import FollowersListDialog from "../components/FollowersListDialog";
 import { alpha } from "@mui/material/styles";
+import UserProfileCard from "../components/UserProfileCard";
 
-interface SocialLink {
+interface SocialLinkItem {
   platform: string;
   url: string;
   icon: JSX.Element;
   pattern: string;
   placeholder: string;
-  label?: string;
+  label: string;
   isValid?: boolean;
 }
 
@@ -67,41 +68,44 @@ function Profile() {
         platform: "Website",
         url: user?.socialLinks?.website || "",
         icon: <Language />,
-        // Updated pattern to be more permissive for website URLs
         pattern:
           "^(https?://)?(([\\w-]+\\.)+[\\w-]{2,}|localhost)(:\\d+)?(/.*)?$",
         placeholder: "example.com or sub.example.com",
         label: "Personal Website",
-      },
+      } as SocialLinkItem,
       {
         platform: "Facebook",
         url: user?.socialLinks?.facebook || "",
         icon: <Facebook />,
         pattern: "^(https?://)?(www\\.)?facebook\\.com/.*$",
         placeholder: "https://facebook.com/yourprofile",
-      },
+        label: "Facebook Profile",
+      } as SocialLinkItem,
       {
         platform: "Twitter",
         url: user?.socialLinks?.twitter || "",
         icon: <Twitter />,
         pattern: "^(https?://)?(www\\.)?twitter\\.com/.*$",
         placeholder: "https://twitter.com/yourhandle",
-      },
+        label: "Twitter Handle",
+      } as SocialLinkItem,
       {
         platform: "LinkedIn",
         url: user?.socialLinks?.linkedin || "",
         icon: <LinkedIn />,
         pattern: "^(https?://)?(www\\.)?linkedin\\.com/.*$",
         placeholder: "https://linkedin.com/in/yourprofile",
-      },
+        label: "LinkedIn Profile",
+      } as SocialLinkItem,
       {
         platform: "Instagram",
         url: user?.socialLinks?.instagram || "",
         icon: <Instagram />,
         pattern: "^(https?://)?(www\\.)?instagram\\.com/.*$",
         placeholder: "https://instagram.com/yourhandle",
-      },
-    ],
+        label: "Instagram Handle",
+      } as SocialLinkItem,
+    ] as SocialLinkItem[],
   });
   const [isLoading, setIsLoading] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -122,41 +126,44 @@ function Profile() {
             platform: "Website",
             url: user.socialLinks?.website || "",
             icon: <Language />,
-            // Updated pattern to be more permissive for website URLs
             pattern:
               "^(https?://)?(([\\w-]+\\.)+[\\w-]{2,}|localhost)(:\\d+)?(/.*)?$",
             placeholder: "example.com or sub.example.com",
             label: "Personal Website",
-          },
+          } as SocialLinkItem,
           {
             platform: "Facebook",
             url: user.socialLinks?.facebook || "",
             icon: <Facebook />,
             pattern: "^(https?://)?(www\\.)?facebook\\.com/.*$",
             placeholder: "https://facebook.com/yourprofile",
-          },
+            label: "Facebook Profile",
+          } as SocialLinkItem,
           {
             platform: "Twitter",
             url: user.socialLinks?.twitter || "",
             icon: <Twitter />,
             pattern: "^(https?://)?(www\\.)?twitter\\.com/.*$",
             placeholder: "https://twitter.com/yourhandle",
-          },
+            label: "Twitter Handle",
+          } as SocialLinkItem,
           {
             platform: "LinkedIn",
             url: user.socialLinks?.linkedin || "",
             icon: <LinkedIn />,
             pattern: "^(https?://)?(www\\.)?linkedin\\.com/.*$",
             placeholder: "https://linkedin.com/in/yourprofile",
-          },
+            label: "LinkedIn Profile",
+          } as SocialLinkItem,
           {
             platform: "Instagram",
             url: user.socialLinks?.instagram || "",
             icon: <Instagram />,
             pattern: "^(https?://)?(www\\.)?instagram\\.com/.*$",
             placeholder: "https://instagram.com/yourhandle",
-          },
-        ],
+            label: "Instagram Handle",
+          } as SocialLinkItem,
+        ] as SocialLinkItem[],
       });
     }
   }, [user]);
@@ -206,7 +213,7 @@ function Profile() {
   const handleSocialLinkChange = (platform: string, newUrl: string) => {
     setProfileData((prevData) => ({
       ...prevData,
-      socialLinks: prevData.socialLinks.map((link) =>
+      socialLinks: prevData.socialLinks.map((link: SocialLinkItem) =>
         link.platform === platform
           ? {
               ...link,
@@ -229,8 +236,9 @@ function Profile() {
         throw new Error("Bio cannot exceed 500 characters");
       }
 
-      // Transform social links
-      const socialLinks = {};
+      // Transform social links - initialize as a proper Record type with known keys
+      const socialLinks: Record<string, string> = {};
+
       for (const link of profileData.socialLinks) {
         if (link.url) {
           // Add https:// if no protocol is specified
@@ -242,10 +250,9 @@ function Profile() {
             throw new Error(`Invalid ${link.platform} URL`);
           }
 
-          // Handle website field correctly
+          // Convert platform to lowercase for use as key
           const platformKey = link.platform.toLowerCase();
-          socialLinks[platformKey === "website" ? "website" : platformKey] =
-            urlWithProtocol;
+          socialLinks[platformKey] = urlWithProtocol;
         }
       }
 
@@ -548,6 +555,19 @@ function Profile() {
         userId={user?._id || ""}
         onClose={handleDialogClose}
         open={!!openDialog}
+      />
+      <UserProfileCard
+        user={{
+          _id: user?._id || "",
+          name: user?.name || "",
+          profilePicture: user?.profilePicture,
+          bio: user?.bio || "",
+          followers: user?.followers?.length || 0,
+          following: user?.following?.length || 0,
+          isFollowing: false,
+          role: user?.role,
+          joinedDate: user?.createdAt,
+        }}
       />
     </Container>
   );

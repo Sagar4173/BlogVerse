@@ -16,21 +16,37 @@ const createNotification = async (userId, notification) => {
     user.notifications.unshift(newNotification);
     await user.save();
 
-    // Send real-time notification
-    io.to(userId).emit("notification", newNotification);
+    // Try-catch to handle any socket.io errors in serverless
+    try {
+      // Send real-time notification (safe with our mock io in serverless)
+      io.to(userId).emit("notification", newNotification);
+    } catch (socketError) {
+      console.error("Socket notification error:", socketError);
+      // Continue execution - don't let socket errors disrupt the flow
+    }
 
     // Send email if user has enabled relevant notification
-    if (user.emailPreferences[getEmailPreferenceKey(notification.type)]) {
-      await sendNotificationEmail(
-        user.email,
-        getNotificationEmailSubject(notification.type),
-        notification.text
-      );
+    try {
+      if (
+        user.emailPreferences &&
+        user.emailPreferences[getEmailPreferenceKey(notification.type)]
+      ) {
+        await sendNotificationEmail(
+          user.email,
+          getNotificationEmailSubject(notification.type),
+          notification.text
+        );
+      }
+    } catch (emailError) {
+      console.error("Email notification error:", emailError);
+      // Continue execution - don't let email errors disrupt the flow
     }
 
     return newNotification;
   } catch (error) {
     console.error("Error creating notification:", error);
+    // Return null instead of throwing to prevent function failures
+    return null;
   }
 };
 

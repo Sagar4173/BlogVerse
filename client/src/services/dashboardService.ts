@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/blogs"; // Changed from users to blogs
+const API_URL = import.meta.env.VITE_API_URL + "/blogs"; // Changed from users to blogs
 
 interface DashboardStats {
   totalPosts: number;

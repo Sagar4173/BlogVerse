@@ -12,7 +12,6 @@ import {
   IconButton,
   Alert,
   useTheme,
-  useMediaQuery,
   Avatar,
 } from "@mui/material";
 import { Visibility, VisibilityOff, CloudUpload } from "@mui/icons-material";
@@ -22,7 +21,6 @@ import { useAuth } from "../../context/AuthContext";
 
 const Register = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const { register, error, clearError } = useAuth();
 

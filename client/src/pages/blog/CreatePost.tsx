@@ -162,8 +162,9 @@ function CreatePost() {
 
   const isValidUrl = (url: string) => {
     try {
-      const urlObj = new URL(url);
-      // Add support for more image hosting services
+      // Fix: Using the URL object without actually needing to reference it
+      new URL(url);
+      // Check file extension with regex instead of relying on URL object
       return (
         /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(url) ||
         /images\.unsplash\.com/i.test(url) ||

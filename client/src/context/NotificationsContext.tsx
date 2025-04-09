@@ -3,7 +3,7 @@ import { getNotifications } from "../services/userService";
 import socketService from "../services/socketService";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { useAuth } from "../hooks/useAuth"; // Corrected import path
+import { useAuth } from "../hooks/useAuth"; // Updated import path
 
 interface Notification {
   _id: string;
@@ -41,17 +41,15 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   const { user } = useAuth();
 
   const fetchNotifications = async () => {
-    try {
-      // Only fetch if user is logged in
-      if (!user?._id) {
-        return;
-      }
+    if (!user?._id) {
+      return;
+    }
 
+    try {
       const data = await getNotifications();
       setNotifications(data);
     } catch (error: any) {
       if (error.response?.status === 401) {
-        // Handle unauthorized error silently
         console.warn("User not authenticated for notifications");
         return;
       }
@@ -74,7 +72,6 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
 
       socket.on("notification", (newNotification: Notification) => {
         setNotifications((prev) => [newNotification, ...prev]);
-        // Show toast notification
         toast.info(newNotification.text, {
           position: "bottom-right",
         });
@@ -84,7 +81,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
         socketService.disconnect();
       };
     }
-  }, [user]);
+  }, [user, setNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 

@@ -11,6 +11,11 @@ interface BlogPost {
   category: string;
   coverImage?: string;
   createdAt: string;
+  user?: {
+    _id: string;
+    name: string;
+    profilePicture?: string;
+  };
 }
 
 function CategoryPosts() {
@@ -64,7 +69,12 @@ function CategoryPosts() {
         {posts.length > 0 ? (
           posts.map((post) => (
             <Grid item xs={12} sm={6} md={4} key={post._id}>
-              <BlogCard post={post} />
+              <BlogCard
+                post={{
+                  ...post,
+                  user: post.user || { _id: "", name: "" }, // Providing default user object
+                }}
+              />
             </Grid>
           ))
         ) : (

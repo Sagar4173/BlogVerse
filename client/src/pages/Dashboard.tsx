@@ -3,17 +3,11 @@ import {
   Container,
   Typography,
   Grid,
-  CircularProgress,
   Paper,
   Box,
   Card,
   CardContent,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Button,
-  useTheme,
   Skeleton,
   Divider,
   Tabs,
@@ -22,17 +16,11 @@ import {
 import { motion } from "framer-motion";
 import {
   Person,
-  Assessment,
-  CheckCircle,
   Create,
-  Settings,
   Analytics,
-  Timer,
   Edit,
   Favorite,
   Comment,
-  BookmarkBorder,
-  FavoriteBorder,
 } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -42,10 +30,7 @@ import {
   getUserBookmarkedPosts,
   getUserDrafts,
 } from "../services/blogService";
-import {
-  getDashboardStats,
-  getRecentActivity,
-} from "../services/dashboardService";
+import { getDashboardStats } from "../services/dashboardService";
 import { toast } from "react-toastify";
 import BlogCard from "../components/BlogCard";
 
@@ -56,50 +41,42 @@ interface BlogPost {
   category: string;
   coverImage?: string;
   createdAt: string;
-  status?: string;
+  user: {
+    _id: string;
+    name: string;
+    profilePicture?: string;
+  };
+  comments: any[];
+  likes: any[];
 }
 
 interface Stats {
   totalPosts: number;
   followers: number;
   following: number;
-  completedTasks: number;
-  comments?: number;
-}
-
-interface DashboardStats {
-  totalPosts: number;
-  followers: number;
-  following: number;
   comments: number;
-  stats: {
-    views: number;
-    likes: number;
-    engagement: number;
-  };
+  completedTasks: number;
 }
 
 function Dashboard() {
-  const theme = useTheme();
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<Stats>({
+  const { user } = useAuth();
+
+  const [_, setStats] = useState<Stats>({
     totalPosts: 0,
     followers: 0,
     following: 0,
-    completedTasks: 0,
     comments: 0,
+    completedTasks: 0,
   });
-  const [activeTab, setActiveTab] = useState(0);
+
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [likedPosts, setLikedPosts] = useState<BlogPost[]>([]);
   const [bookmarkedPosts, setBookmarkedPosts] = useState<BlogPost[]>([]);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(
-    null
-  );
   const [draftPosts, setDraftPosts] = useState<BlogPost[]>([]);
-  const [isDraftsLoading, setIsDraftsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<any>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -128,6 +105,7 @@ function Dashboard() {
           followers: statsData.followers,
           following: statsData.following,
           comments: statsData.comments,
+          completedTasks: 0,
         });
       } catch (error: any) {
         const message =
@@ -136,7 +114,6 @@ function Dashboard() {
         toast.error(message);
       } finally {
         setLoading(false);
-        setIsDraftsLoading(false);
       }
     };
 
@@ -145,49 +122,42 @@ function Dashboard() {
 
   const statsConfig = [
     {
-      title: "Total Posts",
-      value: dashboardStats?.totalPosts || 0,
-      icon: <Assessment />,
+      label: "Total Posts",
+      value: dashboardStats.totalPosts || 0,
+      icon: <Create fontSize="large" color="primary" />,
       color: "#0FA4AF",
-      gradient: "linear-gradient(135deg, #0FA4AF 0%, #024950 100%)",
-      trend: `${(dashboardStats?.stats?.engagement || 0).toFixed(1)}%`,
     },
     {
-      title: "Following",
-      value: dashboardStats?.following || 0,
-      icon: <Person />,
-      color: "#4CAF50",
-      gradient: "linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)",
-      trend: "+5%",
+      label: "Followers",
+      value: dashboardStats.followers || 0,
+      icon: <Person fontSize="large" color="primary" />,
+      color: "#7986CB",
     },
     {
-      title: "Followers",
-      value: dashboardStats?.followers || 0,
-      icon: <Favorite />,
-      color: "#FF4081",
-      gradient: "linear-gradient(135deg, #FF4081 0%, #C51162 100%)",
-      trend: "+8%",
+      label: "Total Views",
+      value: dashboardStats.stats?.views || 0,
+      icon: <Analytics fontSize="large" color="primary" />,
+      color: "#4DB6AC",
     },
     {
-      title: "Comments",
-      value: dashboardStats?.comments || 0,
-      icon: <Comment />,
-      color: "#7C4DFF",
-      gradient: "linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%)",
-      trend: `+${((dashboardStats?.stats?.engagement || 0) * 100).toFixed(1)}%`,
+      label: "Engagement",
+      value: Math.round((dashboardStats.stats?.engagement || 0) * 10) / 10,
+      icon: <Comment fontSize="large" color="primary" />,
+      color: "#FF8A65",
     },
   ];
 
   const tabContent = [
     {
-      label: "My Posts",
+      label: `My Posts (${posts.length})`,
       content: posts,
       loading: loading,
     },
     {
-      label: "Drafts",
+      label: `Drafts (${draftPosts.length})`,
       content: draftPosts,
-      loading: isDraftsLoading,
+      loading: loading,
+      isDraft: true,
     },
     {
       label: `Liked (${likedPosts.length})`,
@@ -287,28 +257,30 @@ function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: index * 0.1 }}
             >
-              <Paper
-                elevation={0}
+              <Card
                 sx={{
-                  p: 3,
                   height: "100%",
-                  borderRadius: 3,
+                  borderRadius: 2,
                   position: "relative",
                   overflow: "hidden",
-                  background: stat.gradient,
-                  color: "white",
-                  transition: "all 0.3s ease-in-out",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: `0 12px 24px -10px ${stat.color}50`,
-                  },
+                  border: "1px solid",
+                  borderColor: "divider",
                   "&::before": {
                     content: '""',
                     position: "absolute",
                     top: 0,
                     left: 0,
                     width: "100%",
-                    height: "100%",
+                    height: "4px",
+                    background: stat.color,
+                  },
+                  "&::after": {
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
                     background: `radial-gradient(circle at top right, ${stat.color}20, transparent 50%)`,
                   },
                 }}
@@ -337,186 +309,140 @@ function Dashboard() {
                           fontWeight: 600,
                         }}
                       >
-                        {stat.trend}
+                        {stat.label}
                       </Typography>
                     </Box>
                   </Box>
-                  <Typography
-                    variant="h4"
-                    component="div"
-                    sx={{ mb: 1, fontWeight: 700 }}
-                  >
-                    {stat.value.toLocaleString()}
-                  </Typography>
-                  <Typography sx={{ fontWeight: 500, opacity: 0.9 }}>
-                    {stat.title}
-                  </Typography>
+                  <CardContent>
+                    <Typography
+                      variant="h3"
+                      sx={{ fontWeight: 700, color: stat.color }}
+                    >
+                      {stat.value}
+                    </Typography>
+                  </CardContent>
                 </Box>
-              </Paper>
+              </Card>
             </motion.div>
           </Grid>
         ))}
       </Grid>
 
-      {/* Tabs Section */}
-      <Box sx={{ mb: 4 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(e, v) => setActiveTab(v)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            borderBottom: 1,
-            borderColor: "divider",
-            "& .MuiTab-root": {
-              minWidth: 120,
-              fontWeight: 600,
-              fontSize: "0.95rem",
-              textTransform: "none",
-              transition: "all 0.2s ease-in-out",
-              "&:hover": {
-                color: "primary.main",
-                opacity: 1,
-              },
-            },
-            "& .Mui-selected": {
-              color: "primary.main",
-            },
-            "& .MuiTabs-indicator": {
-              height: 3,
-              borderRadius: 1.5,
-              backgroundColor: "primary.main",
-            },
-          }}
-        >
-          {tabContent.map((tab, index) => (
-            <Tab
-              key={index}
-              label={tab.label}
+      {/* My Posts Section */}
+      <Paper sx={{ mb: 6, overflow: "hidden" }}>
+        <Box sx={{ px: 3, py: 2 }}>
+          <Typography variant="h5" fontWeight="600" sx={{ mb: 2 }}>
+            My Content
+          </Typography>
+        </Box>
+        <Divider />
+
+        {/* Tabs Navigation */}
+        <Box sx={{ width: "100%" }}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+            <Tabs
+              value={activeTab}
+              onChange={(_v, v) => setActiveTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
               sx={{
-                px: 3,
-                py: 2,
+                "& .MuiTab-root": {
+                  textTransform: "none",
+                  fontWeight: 600,
+                  py: 2,
+                },
               }}
-            />
-          ))}
-        </Tabs>
-      </Box>
-
-      {/* Content Section */}
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={8}>
-          {tabContent[activeTab].loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
             >
-              <Grid container spacing={3}>
-                {tabContent[activeTab].content.map((post) => (
-                  <Grid item xs={12} sm={6} key={post._id}>
-                    <BlogCard
-                      post={post}
-                      isDraft={post.status === "draft"}
-                      onEdit={
-                        post.status === "draft"
-                          ? () => navigate(`/edit/${post._id}`)
-                          : undefined
-                      }
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-            </motion.div>
-          )}
-        </Grid>
+              {tabContent.map((tab, index) => (
+                <Tab key={index} label={tab.label} />
+              ))}
+            </Tabs>
+          </Box>
 
-        {/* Quick Actions Section */}
-        <Grid item xs={12} md={4}>
-          <Card
-            component={motion.div}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: "1px solid",
-              borderColor: "divider",
-              position: "sticky",
-              top: 24,
-              bgcolor: "background.paper",
-              backdropFilter: "blur(8px)",
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                Quick Actions
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Button
-                  variant="contained"
-                  startIcon={<Create />}
-                  component={Link}
-                  to="/write"
-                  sx={{
-                    py: 1.5,
-                    px: 3,
-                    borderRadius: 2,
-                    background:
-                      "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
-                    color: "white",
-                    fontWeight: 600,
-                    textTransform: "none",
-                    "&:hover": {
-                      background:
-                        "linear-gradient(45deg, #013137 30%, #0C8A96 90%)",
-                      transform: "translateY(-2px)",
-                      boxShadow: "0 8px 16px -4px rgba(15, 164, 175, 0.2)",
-                    },
-                  }}
-                >
-                  Create New Post
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<Edit />}
-                  component={Link}
-                  to="/profile"
-                  sx={{
-                    py: 1.5,
-                    px: 3,
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    textTransform: "none",
-                  }}
-                >
-                  Edit Profile
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<Analytics />}
-                  component={Link}
-                  to="/analytics"
-                  sx={{
-                    py: 1.5,
-                    px: 3,
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    textTransform: "none",
-                  }}
-                >
-                  View Analytics
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+          {/* Tab Content */}
+          <Box sx={{ p: 3 }}>
+            {tabContent.map((tab, index) => (
+              <div
+                key={index}
+                role="tabpanel"
+                hidden={activeTab !== index}
+                id={`tab-${index}`}
+                aria-labelledby={`tab-${index}`}
+              >
+                {activeTab === index && (
+                  <>
+                    {tab.content.length > 0 ? (
+                      <Grid container spacing={3}>
+                        {tab.content.map((post) => (
+                          <Grid item xs={12} sm={6} md={4} key={post._id}>
+                            <BlogCard
+                              post={{
+                                ...post,
+                                user: post.user || { _id: "", name: "" },
+                              }}
+                              isDraft={tab.isDraft}
+                              onEdit={
+                                tab.isDraft
+                                  ? () => navigate(`/write?id=${post._id}`)
+                                  : undefined
+                              }
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    ) : (
+                      <Box
+                        sx={{
+                          textAlign: "center",
+                          py: 5,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 2,
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          color="text.secondary"
+                          sx={{ mb: 2 }}
+                        >
+                          {activeTab === 0
+                            ? "You haven't published any posts yet"
+                            : activeTab === 1
+                            ? "You don't have any drafts"
+                            : activeTab === 2
+                            ? "You haven't liked any posts yet"
+                            : "You haven't bookmarked any posts yet"}
+                        </Typography>
+                        {activeTab <= 1 && (
+                          <Button
+                            variant="contained"
+                            component={Link}
+                            to="/write"
+                            startIcon={<Edit />}
+                          >
+                            Create New Post
+                          </Button>
+                        )}
+                        {(activeTab === 2 || activeTab === 3) && (
+                          <Button
+                            variant="contained"
+                            component={Link}
+                            to="/explore"
+                            startIcon={<Favorite />}
+                          >
+                            Explore Posts
+                          </Button>
+                        )}
+                      </Box>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </Box>
+        </Box>
+      </Paper>
     </Container>
   );
 }

@@ -11,7 +11,6 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import CreatePost from "./pages/blog/CreatePost";
 import BlogPost from "./pages/blog/BlogPost";
-import CategoryPosts from "./pages/blog/CategoryPosts";
 import CategoryView from "./pages/blog/CategoryView";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";

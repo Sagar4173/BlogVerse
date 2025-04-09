@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Container,
   Box,
@@ -11,29 +11,27 @@ import {
   IconButton,
   Alert,
   useTheme,
-  useMediaQuery,
-} from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
+} from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
 
 const Login = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const { login, error, clearError } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) clearError();
   };
 
@@ -42,9 +40,9 @@ const Login = () => {
     setLoading(true);
     try {
       await login(formData.email, formData.password);
-      navigate('/');
+      navigate("/");
     } catch (err) {
-      console.error('Login error:', err);
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
@@ -54,10 +52,10 @@ const Login = () => {
     <Container maxWidth="sm">
       <Box
         sx={{
-          minHeight: '80vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          minHeight: "80vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           py: 4,
         }}
       >
@@ -65,20 +63,22 @@ const Login = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          style={{ width: '100%' }}
+          style={{ width: "100%" }}
         >
           <Paper
             elevation={3}
             sx={{
               p: { xs: 3, sm: 4 },
-              background: theme.palette.mode === 'light'
-                ? 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.8) 100%)'
-                : 'linear-gradient(135deg, rgba(0, 49, 53, 0.9) 0%, rgba(2, 73, 80, 0.8) 100%)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid',
-              borderColor: theme.palette.mode === 'light'
-                ? 'rgba(255,255,255,0.5)'
-                : 'rgba(255,255,255,0.1)',
+              background:
+                theme.palette.mode === "light"
+                  ? "linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.8) 100%)"
+                  : "linear-gradient(135deg, rgba(0, 49, 53, 0.9) 0%, rgba(2, 73, 80, 0.8) 100%)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid",
+              borderColor:
+                theme.palette.mode === "light"
+                  ? "rgba(255,255,255,0.5)"
+                  : "rgba(255,255,255,0.1)",
             }}
           >
             <Typography
@@ -86,23 +86,19 @@ const Login = () => {
               component="h1"
               gutterBottom
               sx={{
-                textAlign: 'center',
+                textAlign: "center",
                 mb: 4,
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #024950 0%, #0FA4AF 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                background: "linear-gradient(135deg, #024950 0%, #0FA4AF 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
               }}
             >
               Welcome Back
             </Typography>
 
             {error && (
-              <Alert 
-                severity="error" 
-                sx={{ mb: 3 }}
-                onClose={clearError}
-              >
+              <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
                 {error}
               </Alert>
             )}
@@ -119,9 +115,9 @@ const Login = () => {
                 required
                 sx={{
                   mb: 2,
-                  '& .MuiOutlinedInput-root': {
-                    '&:hover fieldset': {
-                      borderColor: '#0FA4AF',
+                  "& .MuiOutlinedInput-root": {
+                    "&:hover fieldset": {
+                      borderColor: "#0FA4AF",
                     },
                   },
                 }}
@@ -131,7 +127,7 @@ const Login = () => {
                 fullWidth
                 label="Password"
                 name="password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={handleChange}
                 margin="normal"
@@ -150,9 +146,9 @@ const Login = () => {
                 }}
                 sx={{
                   mb: 3,
-                  '& .MuiOutlinedInput-root': {
-                    '&:hover fieldset': {
-                      borderColor: '#0FA4AF',
+                  "& .MuiOutlinedInput-root": {
+                    "&:hover fieldset": {
+                      borderColor: "#0FA4AF",
                     },
                   },
                 }}
@@ -167,27 +163,29 @@ const Login = () => {
                 sx={{
                   mb: 2,
                   py: 1.5,
-                  background: 'linear-gradient(135deg, #0FA4AF 0%, #AFDDE5 100%)',
-                  color: '#FFFFFF',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #024950 0%, #0FA4AF 100%)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 20px rgba(15, 164, 175, 0.3)',
+                  background:
+                    "linear-gradient(135deg, #0FA4AF 0%, #AFDDE5 100%)",
+                  color: "#FFFFFF",
+                  "&:hover": {
+                    background:
+                      "linear-gradient(135deg, #024950 0%, #0FA4AF 100%)",
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 6px 20px rgba(15, 164, 175, 0.3)",
                   },
                 }}
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? "Signing in..." : "Sign In"}
               </Button>
 
-              <Box sx={{ textAlign: 'center' }}>
+              <Box sx={{ textAlign: "center" }}>
                 <MuiLink
                   component={Link}
                   to="/forgot-password"
                   sx={{
-                    color: 'primary.main',
-                    textDecoration: 'none',
-                    '&:hover': {
-                      textDecoration: 'underline',
+                    color: "primary.main",
+                    textDecoration: "none",
+                    "&:hover": {
+                      textDecoration: "underline",
                     },
                   }}
                 >
@@ -195,16 +193,16 @@ const Login = () => {
                 </MuiLink>
 
                 <Typography sx={{ mt: 2 }}>
-                  Don't have an account?{' '}
+                  Don't have an account?{" "}
                   <MuiLink
                     component={Link}
                     to="/register"
                     sx={{
-                      color: 'primary.main',
-                      textDecoration: 'none',
+                      color: "primary.main",
+                      textDecoration: "none",
                       fontWeight: 600,
-                      '&:hover': {
-                        textDecoration: 'underline',
+                      "&:hover": {
+                        textDecoration: "underline",
                       },
                     }}
                   >
@@ -220,4 +218,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;

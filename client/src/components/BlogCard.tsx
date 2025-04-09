@@ -24,22 +24,7 @@ import { likeBlog } from "../services/blogService";
 import { bookmarkBlog } from "../services/userService";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
-
-interface BlogPost {
-  _id: string;
-  title: string;
-  content: string;
-  category: string;
-  coverImage?: string;
-  createdAt: string;
-  user: {
-    _id: string;
-    name: string;
-  };
-  likesCount?: number;
-  commentsCount?: number;
-  likes?: Array<{ user: string }>;
-}
+import { BlogPost } from "../types/User";
 
 interface Props {
   post: BlogPost;
@@ -50,13 +35,15 @@ interface Props {
 function BlogCard({ post, isDraft, onEdit }: Props) {
   const { user } = useAuth();
   const [imageError, setImageError] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState<boolean>(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const hasUserLiked = post.likes?.some((like) => like.user === user?._id);
-    setIsLiked(hasUserLiked);
+    if (hasUserLiked !== undefined) {
+      setIsLiked(hasUserLiked);
+    }
   }, [post.likes, user?._id]);
 
   const optimizeCloudinaryUrl = (url: string) => {

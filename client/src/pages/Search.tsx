@@ -77,14 +77,25 @@ function Search() {
       ) : (
         <Grid container spacing={3}>
           {results.length > 0 ? (
-            results.map((blog, index) => (
-              <Grid item xs={12} sm={6} md={4} key={blog._id}>
+            results.map((blog: any, index) => (
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={4}
+                key={blog._id || `blog-${Math.random()}`}
+              >
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
-                  <BlogCard post={blog} />
+                  <BlogCard
+                    post={{
+                      ...blog,
+                      user: blog.user || { _id: "", name: "" },
+                    }}
+                  />
                 </motion.div>
               </Grid>
             ))

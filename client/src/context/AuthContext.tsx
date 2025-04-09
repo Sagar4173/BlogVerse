@@ -1,16 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  profilePicture: string;
-  role: string;
-  followers: string[];
-  following: string[];
-  postsCount: number;
-}
+import { User } from "../types/User";
 
 interface AuthContextType {
   user: User | null;
@@ -31,7 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -221,8 +211,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return {
         ...prev,
         following: isFollowing
-          ? [...(prev.following || []), user.id]
-          : (prev.following || []).filter((id) => id !== user.id),
+          ? [...(prev.following || []), user?._id || ""]
+          : (prev.following || []).filter((id) => id !== user?._id),
       };
     });
   };

@@ -1,22 +1,25 @@
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { ReactNode } from 'react';
-import { CircularProgress, Box } from '@mui/material';
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { ReactNode } from "react";
+import { CircularProgress, Box } from "@mui/material";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   adminOnly?: boolean;
 }
 
-const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({
+  children,
+  adminOnly = false,
+}: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <Box 
-        display="flex" 
-        justifyContent="center" 
-        alignItems="center" 
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
         minHeight="80vh"
       >
         <CircularProgress />
@@ -28,11 +31,11 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
     return <Navigate to="/login" />;
   }
 
-  if (adminOnly && !user.isAdmin) {
+  if (adminOnly && user.role !== "admin") {
     return <Navigate to="/" />;
   }
 
   return <>{children}</>;
 };
 
-export default ProtectedRoute; 
+export default ProtectedRoute;

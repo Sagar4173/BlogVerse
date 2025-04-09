@@ -4,23 +4,84 @@ const Blog = require("../models/Blog");
 const User = require("../models/User");
 const auth = require("../middleware/auth");
 const cloudinary = require("../config/cloudinary");
-const mongoose = require("mongoose"); // Added mongoose for aggregation
+const mongoose = require("mongoose");
+const dbConnect = require("../utils/dbConnect");
+
+// Middleware to ensure database connection for all routes
+router.use(async (req, res, next) => {
+  try {
+    await dbConnect();
+    next();
+  } catch (err) {
+    console.error("Database connection error in middleware:", err);
+    return res.status(503).json({
+      message: "Database connection unavailable",
+      status: "error",
+    });
+  }
+});
 
 // @route   GET api/blogs
 // @desc    Get all blogs
 // @access  Public
 router.get("/", async (req, res) => {
   try {
-    const blogs = await Blog.find()
+    // Add a status check to ensure the database connection is active
+    if (mongoose.connection.readyState !== 1) {
+      console.error("MongoDB connection is not active");
+      return res.status(503).json({
+        message: "Database connection unavailable",
+        status: "error",
+        readyState: mongoose.connection.readyState,
+      });
+    }
+
+    // Add a status field for filtering (published posts only)
+    const query = { status: "published" };
+
+    // Use lean() for better performance - returns plain JS objects instead of Mongoose documents
+    const blogs = await Blog.find(query)
       .sort({ createdAt: -1 })
       .populate("user", "name")
-      .select("title content category coverImage createdAt user");
-    res.json(blogs);
+      .select("title content category coverImage createdAt user")
+      .lean()
+      .limit(50); // Add limit to prevent overwhelming the serverless function
+
+    if (!blogs) {
+      return res.json([]); // Return empty array as a fallback
+    }
+
+    return res.json(blogs);
   } catch (err) {
-    console.error("Error fetching blogs:", err.message, err.stack); // Enhanced error logging
-    res
-      .status(500)
-      .json({ message: "Failed to fetch blogs", error: err.message });
+    // Enhanced error logging with more details
+    console.error("Error fetching blogs:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code,
+      name: err.name,
+      connectionState: mongoose.connection.readyState,
+    });
+
+    // Special handling for common MongoDB errors
+    if (err.name === "MongoTimeoutError") {
+      return res.status(504).json({
+        message: "Database query timed out",
+        error: "timeout",
+      });
+    }
+
+    if (err.name === "MongoNetworkError" || err.message?.includes("topology")) {
+      return res.status(503).json({
+        message: "Database connection error",
+        error: "network",
+      });
+    }
+
+    // Default error response
+    res.status(500).json({
+      message: "Failed to fetch blogs",
+      error: err.message || "Unknown error",
+    });
   }
 });
 

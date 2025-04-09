@@ -11,7 +11,6 @@ import {
   Menu,
   MenuItem,
   Avatar,
-  Tooltip,
   alpha,
   styled,
   Drawer,
@@ -131,9 +130,6 @@ function Navbar() {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [categoryAnchorEl, setCategoryAnchorEl] = useState<null | HTMLElement>(
-    null
-  );
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoriesAnchor, setCategoriesAnchor] = useState<null | HTMLElement>(
@@ -162,13 +158,8 @@ function Navbar() {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleCategoryMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setCategoryAnchorEl(event.currentTarget);
-  };
-
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setCategoryAnchorEl(null);
   };
 
   const debouncedSearch = debounce(async (query: string) => {
@@ -244,7 +235,7 @@ function Navbar() {
     {
       text: "Categories",
       icon: <CategoryIcon />,
-      onClick: () => setCategoryAnchorEl(null),
+      onClick: () => setCategoriesAnchor(null),
       hasSubmenu: true,
     },
     { text: "Write", icon: <EditIcon />, to: "/write" },
