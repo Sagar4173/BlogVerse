@@ -10,7 +10,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { theme } from "./theme";
-import { register as registerServiceWorker } from "./serviceWorker";
+// import { register as registerServiceWorker } from "./serviceWorker";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -23,4 +23,15 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
-registerServiceWorker();
+// Register service worker only in production and when explicitly enabled
+if ('serviceWorker' in navigator && import.meta.env.PROD && !import.meta.env.DEV) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('SW registered: ', registration);
+      })
+      .catch((registrationError) => {
+        console.log('SW registration failed: ', registrationError);
+      });
+  });
+}

@@ -133,6 +133,66 @@ export const publishDraft = async (blogId: string) => {
   return response.data;
 };
 
+export const updateBlog = async (blogId: string, blogData: BlogData) => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("No authentication token found");
+    }
+
+    const requestData = {
+      title: blogData.title.trim(),
+      content: blogData.content.trim(),
+      category: blogData.category.trim(),
+      coverImage: blogData.coverImage?.trim() || "",
+      isDraft: Boolean(blogData.isDraft),
+      status: blogData.isDraft ? "draft" : "published",
+      publishedAt: blogData.isDraft ? null : new Date().toISOString(),
+    };
+
+    const response = await axios.put(`${API_URL}/${blogId}`, requestData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 15000,
+    });
+
+    return response.data;
+  } catch (error: any) {
+    console.error("Error updating blog:", error);
+    const errorMessage =
+      error.response?.data?.message ||
+      error.response?.data?.msg ||
+      "Failed to update blog";
+    throw new Error(errorMessage);
+  }
+};
+
+export const deleteBlog = async (blogId: string) => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("No authentication token found");
+    }
+
+    const response = await axios.delete(`${API_URL}/${blogId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (error: any) {
+    console.error("Error deleting blog:", error);
+    const errorMessage =
+      error.response?.data?.message ||
+      error.response?.data?.msg ||
+      "Failed to delete blog";
+    throw new Error(errorMessage);
+  }
+};
+
 export const getBlog = async (id: string) => {
   const response = await axios.get(`${API_URL}/${id}`);
   return response.data;

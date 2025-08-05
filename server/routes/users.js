@@ -514,4 +514,51 @@ router.get("/user-search", async (req, res) => {
   }
 });
 
+// @route   GET api/users/:id/activity
+// @desc    Get user activity timeline
+// @access  Public
+router.get("/:id/activity", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit = 20, offset = 0 } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    // Get user's blog posts (creation activity)
+    const userBlogs = await Blog.find({ user: id })
+      .populate("user", "name profilePicture")
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset));
+
+    // Create activity items from blog posts
+    const activities = userBlogs.map((blog) => ({
+      _id: blog._id + "_created",
+      type: "post_created",
+      createdAt: blog.createdAt,
+      user: blog.user,
+      blog: {
+        _id: blog._id,
+        title: blog.title,
+      },
+    }));
+
+    // Future enhancement: Add other activity types like likes, comments, follows
+    // For now, we'll just show blog creation activities
+
+    // Sort all activities by creation date
+    activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({
+      activities: activities.slice(0, parseInt(limit)),
+      hasMore: activities.length > parseInt(limit),
+    });
+  } catch (err) {
+    console.error("Error fetching user activity:", err);
+    res.status(500).json({ message: "Failed to fetch user activity" });
+  }
+});
+
 module.exports = router;

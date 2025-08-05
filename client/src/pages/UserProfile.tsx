@@ -19,6 +19,7 @@ import { getUserProfile } from "../services/userService";
 import { useAuth } from "../context/AuthContext";
 import UserProfileCard from "../components/UserProfileCard";
 import BlogCard from "../components/BlogCard";
+import UserActivityTimeline from "../components/UserActivityTimeline";
 
 interface UserProfile {
   _id: string;
@@ -280,10 +281,11 @@ function UserProfile() {
 
           {activeTab === 2 && (
             <Box>
-              {/* Add activity timeline here */}
-              <Typography color="text.secondary" textAlign="center">
-                Coming soon...
+              <Typography variant="h6" gutterBottom>
+                Recent Activity
               </Typography>
+              <Divider sx={{ mb: 3 }} />
+              {userId && <UserActivityTimeline userId={userId} limit={20} />}
             </Box>
           )}
         </Grid>

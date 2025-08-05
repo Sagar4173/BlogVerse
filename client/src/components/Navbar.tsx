@@ -297,7 +297,7 @@ function Navbar() {
               flexShrink: 0,
             }}
           >
-            <Logo size="small" showText={false} />
+            <Logo size="small" showText={false} asChild />
             <Typography
               variant="h6"
               sx={{

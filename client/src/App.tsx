@@ -7,6 +7,7 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import VerifyEmail from "./pages/auth/VerifyEmail";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import CreatePost from "./pages/blog/CreatePost";
@@ -18,6 +19,10 @@ import ExploreBlogsPage from "./pages/blog/ExploreBlogsPage";
 import Analytics from "./pages/Analytics";
 import UserProfile from "./pages/UserProfile";
 import Search from "./pages/Search";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Box } from "@mui/material";
@@ -162,7 +167,12 @@ function App() {
         <CssBaseline />
         <AuthProvider>
           <NotificationsProvider>
-            <Router>
+            <Router
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
               <Box
                 sx={{
                   display: "flex",
@@ -176,6 +186,7 @@ function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route
                       path="/forgot-password"
                       element={<ForgotPassword />}
@@ -225,6 +236,10 @@ function App() {
                     />
                     <Route path="/user/:userId" element={<UserProfile />} />
                     <Route path="/search" element={<Search />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/terms" element={<TermsOfService />} />
                   </Routes>
                 </Box>
                 <Footer />

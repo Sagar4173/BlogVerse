@@ -7,8 +7,10 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (formData: FormData) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;
+  register: (formData: FormData) => Promise<any>;
+  verifyEmail: (email: string, otp: string) => Promise<any>;
+  resendOTP: (email: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
@@ -30,15 +32,19 @@ const api = axios.create({
 // Add request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
-    console.log("API Request:", {
-      method: config.method,
-      url: config.url,
-      data: config.data,
-    });
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log("API Request:", {
+        method: config.method,
+        url: config.url,
+      });
+    }
     return config;
   },
   (error) => {
-    console.error("API Request Error:", error);
+    if (import.meta.env.DEV) {
+      console.error("API Request Error:", error);
+    }
     return Promise.reject(error);
   }
 );
@@ -46,18 +52,20 @@ api.interceptors.request.use(
 // Add response interceptor for debugging
 api.interceptors.response.use(
   (response) => {
-    console.log("API Response:", {
-      status: response.status,
-      data: response.data,
-    });
+    if (import.meta.env.DEV) {
+      console.log("API Response:", {
+        status: response.status,
+      });
+    }
     return response;
   },
   (error) => {
-    console.error("API Response Error:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
+    if (import.meta.env.DEV) {
+      console.error("API Response Error:", {
+        status: error.response?.status,
+        message: error.message,
+      });
+    }
     return Promise.reject(error);
   }
 );
@@ -79,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem("token")
   );
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
 
   // Update axios authorization header when token changes
   useEffect(() => {
@@ -91,7 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     const loadUser = async () => {
-      if (token) {
+      if (token && !user && !isLoadingUser) {
+        setIsLoadingUser(true);
         try {
           const res = await api.get("/auth/me");
           // Get posts count
@@ -101,10 +111,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             postsCount: statsRes.data.totalPosts || 0,
           });
         } catch (err) {
+          console.error("Failed to load user:", err);
           localStorage.removeItem("token");
           setToken(null);
           setUser(null);
+        } finally {
+          setIsLoadingUser(false);
         }
+      } else if (!token) {
+        setUser(null);
       }
       setLoading(false);
     };
@@ -126,12 +141,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setToken(newToken);
       setUser(userData);
       setError(null);
+      return res.data;
     } catch (err: any) {
       console.error("Login error details:", {
         response: err.response?.data,
         status: err.response?.status,
         error: err,
       });
+
+      // Check if verification is required
+      if (err.response?.data?.requiresVerification) {
+        setError(null);
+        return {
+          requiresVerification: true,
+          email: err.response.data.email,
+          message: err.response.data.message,
+        };
+      }
+
       const errorMessage =
         err.response?.data?.msg ||
         err.response?.data?.message ||
@@ -153,11 +180,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error(res.data.message || "Registration failed");
       }
 
+      // Check if verification is required
+      if (res.data.requiresVerification) {
+        setError(null);
+        return res.data; // Return the response for verification handling
+      }
+
+      // If no verification required, proceed with login
       const { token: newToken, user: userData } = res.data;
       localStorage.setItem("token", newToken);
       setToken(newToken);
       setUser(userData);
       setError(null);
+      return res.data;
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
@@ -203,6 +238,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const verifyEmail = async (email: string, otp: string) => {
+    try {
+      const res = await api.post("/auth/verify-email", { email, otp });
+      setError(null);
+
+      // If verification successful and includes login data
+      if (res.data.success && res.data.token) {
+        const { token: newToken, user: userData } = res.data;
+        localStorage.setItem("token", newToken);
+        setToken(newToken);
+        setUser(userData);
+      }
+
+      return res.data;
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        err.response?.data?.msg ||
+        "An error occurred during verification";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const resendOTP = async (email: string) => {
+    try {
+      await api.post("/auth/resend-otp", { email });
+      setError(null);
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        err.response?.data?.msg ||
+        "An error occurred while resending OTP";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
   const clearError = () => setError(null);
 
   const updateFollowerCount = (isFollowing: boolean) => {
@@ -230,6 +303,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         token,
         login,
         register,
+        verifyEmail,
+        resendOTP,
         logout,
         forgotPassword,
         resetPassword,

@@ -46,7 +46,9 @@ const sendNotificationEmail = async (to, subject, text) => {
       ),
     ]);
 
-    console.log(`Notification email sent to ${to}`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Notification email sent to ${to}`);
+    }
     return true;
   } catch (error) {
     console.error("Error sending notification email:", error);

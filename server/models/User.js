@@ -53,6 +53,14 @@ const UserSchema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: String,
+    emailVerificationExpire: Date,
+    emailOTP: String,
+    emailOTPExpire: Date,
     followers: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -168,6 +176,31 @@ UserSchema.methods.getResetPasswordToken = function () {
     .digest("hex");
   this.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
   return resetToken;
+};
+
+// Generate email verification token
+UserSchema.methods.getEmailVerificationToken = function () {
+  const verificationToken = crypto.randomBytes(20).toString("hex");
+  this.emailVerificationToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+  this.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  return verificationToken;
+};
+
+// Generate email OTP
+UserSchema.methods.generateEmailOTP = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  this.emailOTP = crypto.createHash("sha256").update(otp).digest("hex");
+  this.emailOTPExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+  return otp;
+};
+
+// Verify email OTP
+UserSchema.methods.verifyEmailOTP = function (otp) {
+  const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+  return this.emailOTP === hashedOTP && this.emailOTPExpire > Date.now();
 };
 
 module.exports = mongoose.model("User", UserSchema); // Ensure 'User' is the correct model name

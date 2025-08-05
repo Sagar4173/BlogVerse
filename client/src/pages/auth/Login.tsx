@@ -38,9 +38,18 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      await login(formData.email, formData.password);
-      navigate("/");
+      const result = await login(formData.email, formData.password);
+
+      // Check if verification is required
+      if (result && result.requiresVerification) {
+        navigate("/verify-email", {
+          state: { email: result.email },
+        });
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       console.error("Login error:", err);
     } finally {

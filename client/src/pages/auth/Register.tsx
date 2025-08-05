@@ -18,6 +18,7 @@ import { Visibility, VisibilityOff, CloudUpload } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
+import PasswordStrengthIndicator from "../../components/PasswordStrengthIndicator";
 
 const Register = () => {
   const theme = useTheme();
@@ -55,10 +56,35 @@ const Register = () => {
   };
 
   const validateForm = () => {
+    // Basic password match check
     if (formData.password !== formData.confirmPassword) {
       setPasswordError("Passwords do not match");
       return false;
     }
+
+    // Password strength validation
+    const minLength = formData.password.length >= 8;
+    const hasUpper = /[A-Z]/.test(formData.password);
+    const hasLower = /[a-z]/.test(formData.password);
+    const hasNumber = /\d/.test(formData.password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
+
+    if (!minLength) {
+      setPasswordError("Password must be at least 8 characters long");
+      return false;
+    }
+
+    const strengthScore = [hasUpper, hasLower, hasNumber, hasSpecial].filter(
+      Boolean
+    ).length;
+    if (strengthScore < 3) {
+      setPasswordError(
+        "Password is too weak. Please include uppercase, lowercase, numbers, and special characters"
+      );
+      return false;
+    }
+
+    setPasswordError("");
     return true;
   };
 
@@ -77,8 +103,17 @@ const Register = () => {
         formDataToSend.append("profilePicture", profilePicture);
       }
 
-      await register(formDataToSend);
-      navigate("/");
+      const result = await register(formDataToSend);
+
+      // Check if email verification is required
+      if (result && result.requiresVerification) {
+        navigate("/verify-email", {
+          state: { email: formData.email },
+        });
+      } else {
+        // Direct login success (fallback)
+        navigate("/dashboard");
+      }
     } catch (err) {
       console.error("Registration error:", err);
     } finally {
@@ -249,6 +284,12 @@ const Register = () => {
                     },
                   },
                 }}
+              />
+
+              {/* Password Strength Indicator */}
+              <PasswordStrengthIndicator
+                password={formData.password}
+                showDetails={true}
               />
 
               <TextField

@@ -10,15 +10,12 @@ let isConnected = false;
 const dbConnect = async () => {
   // If already connected, return the existing connection
   if (isConnected) {
-    console.log("Using existing MongoDB connection");
     return;
   }
 
   try {
     // Check connection state
     if (mongoose.connection.readyState !== 1) {
-      console.log("Creating new MongoDB connection...");
-
       // Set mongoose options
       mongoose.set("strictQuery", false);
 
@@ -28,7 +25,6 @@ const dbConnect = async () => {
         socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
       });
 
-      console.log("MongoDB connected!");
       isConnected = true;
       return db;
     }

@@ -8,6 +8,11 @@ import {
   CardActions,
   Button,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
 } from "@mui/material";
 import {
   Article,
@@ -16,11 +21,13 @@ import {
   Comment,
   Share,
   Bookmark,
+  Publish,
+  Delete,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { formatDateTime } from "../utils/dateUtils";
-import { likeBlog } from "../services/blogService";
+import { likeBlog, publishDraft, deleteBlog } from "../services/blogService";
 import { bookmarkBlog } from "../services/userService";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
@@ -30,14 +37,20 @@ interface Props {
   post: BlogPost;
   isDraft?: boolean;
   onEdit?: () => void;
+  onPublish?: (postId: string) => void;
+  onDelete?: (postId: string) => void;
 }
 
-function BlogCard({ post, isDraft, onEdit }: Props) {
+function BlogCard({ post, isDraft, onEdit, onPublish, onDelete }: Props) {
   const { user } = useAuth();
   const [imageError, setImageError] = useState(false);
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const hasUserLiked = post.likes?.some((like) => like.user === user?._id);
@@ -147,6 +160,46 @@ function BlogCard({ post, isDraft, onEdit }: Props) {
   const handleFallbackShare = (url: string) => {
     navigator.clipboard.writeText(url);
     toast.success("Link copied to clipboard!");
+  };
+
+  const handlePublishDraft = async () => {
+    try {
+      setIsPublishing(true);
+      await publishDraft(post._id);
+      toast.success("Draft published successfully!");
+      setShowPublishDialog(false);
+
+      // Notify parent component about the publish action
+      if (onPublish) {
+        onPublish(post._id);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to publish draft");
+      console.error("Error publishing draft:", error);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteBlog(post._id);
+      toast.success(`${isDraft ? "Draft" : "Post"} deleted successfully!`);
+      setShowDeleteDialog(false);
+
+      // Notify parent component about the delete action
+      if (onDelete) {
+        onDelete(post._id);
+      }
+    } catch (error: any) {
+      toast.error(
+        error.message || `Failed to delete ${isDraft ? "draft" : "post"}`
+      );
+      console.error("Error deleting post:", error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const getLikesCount = () => post.likesCount || 0;
@@ -422,24 +475,150 @@ function BlogCard({ post, isDraft, onEdit }: Props) {
         </IconButton>
       </CardActions>
 
-      {onEdit && isDraft && (
-        <CardActions sx={{ p: 2, pt: 0 }}>
+      {/* Delete button for user's own published posts */}
+      {!isDraft && user && post.user && post.user._id === user._id && (
+        <CardActions sx={{ p: 1, pt: 0, justifyContent: "flex-end" }}>
           <Button
             size="small"
-            onClick={onEdit}
-            startIcon={<Edit />}
+            onClick={() => setShowDeleteDialog(true)}
+            startIcon={<Delete />}
+            variant="outlined"
+            color="error"
             sx={{
-              color: "primary.main",
+              fontSize: "0.75rem",
               "&:hover": {
-                backgroundColor: "primary.main",
+                backgroundColor: "error.main",
                 color: "white",
               },
             }}
           >
-            Continue Editing
+            Delete Post
           </Button>
         </CardActions>
       )}
+
+      {isDraft && (
+        <CardActions sx={{ p: 2, pt: 0, gap: 1 }}>
+          {onEdit && (
+            <Button
+              size="small"
+              onClick={onEdit}
+              startIcon={<Edit />}
+              sx={{
+                color: "primary.main",
+                "&:hover": {
+                  backgroundColor: "primary.main",
+                  color: "white",
+                },
+              }}
+            >
+              Continue Editing
+            </Button>
+          )}
+          <Button
+            size="small"
+            onClick={() => setShowPublishDialog(true)}
+            startIcon={<Publish />}
+            variant="contained"
+            color="success"
+            sx={{
+              "&:hover": {
+                backgroundColor: "success.dark",
+              },
+            }}
+          >
+            Publish Draft
+          </Button>
+          <Button
+            size="small"
+            onClick={() => setShowDeleteDialog(true)}
+            startIcon={<Delete />}
+            variant="outlined"
+            color="error"
+            sx={{
+              "&:hover": {
+                backgroundColor: "error.main",
+                color: "white",
+              },
+            }}
+          >
+            Delete
+          </Button>
+        </CardActions>
+      )}
+
+      {/* Publish Confirmation Dialog */}
+      <Dialog
+        open={showPublishDialog}
+        onClose={() => setShowPublishDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Publish Draft</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to publish "{post.title}"? This will make it
+            visible to all users and it will appear in the published posts
+            section.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setShowPublishDialog(false)}
+            disabled={isPublishing}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handlePublishDraft}
+            variant="contained"
+            color="success"
+            disabled={isPublishing}
+            startIcon={
+              isPublishing ? <CircularProgress size={16} /> : <Publish />
+            }
+          >
+            {isPublishing ? "Publishing..." : "Publish"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: "error.main" }}>
+          Delete {isDraft ? "Draft" : "Post"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete "{post.title}"? This action cannot
+            be undone.
+            {!isDraft &&
+              " The post will be permanently removed and will no longer be visible to users."}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setShowDeleteDialog(false)}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeletePost}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} /> : <Delete />}
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }

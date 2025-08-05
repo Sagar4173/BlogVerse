@@ -14,7 +14,7 @@ class SocketService {
   }
 
   connect(userId: string) {
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || "https://your-production-api-domain.vercel.app";
     if (!this.socket) {
       this.socket = io(API_URL, {
         transports: ["websocket", "polling"],

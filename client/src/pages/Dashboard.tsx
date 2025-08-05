@@ -120,6 +120,45 @@ function Dashboard() {
     fetchDashboardData();
   }, []);
 
+  const refreshData = async () => {
+    try {
+      const [userPosts, likedData, bookmarkedData, statsData, draftsData] =
+        await Promise.all([
+          getUserPosts(),
+          getUserLikedPosts(),
+          getUserBookmarkedPosts(),
+          getDashboardStats(),
+          getUserDrafts(),
+        ]);
+
+      setPosts(userPosts);
+      setLikedPosts(likedData);
+      setBookmarkedPosts(bookmarkedData);
+      setDashboardStats(statsData);
+      setDraftPosts(draftsData);
+    } catch (error: any) {
+      const message = error.response?.data?.message || "Failed to refresh data";
+      toast.error(message);
+    }
+  };
+
+  const handlePublishDraft = async (postId: string) => {
+    // Remove the published post from drafts and refresh data
+    setDraftPosts((prev) => prev.filter((post) => post._id !== postId));
+    await refreshData();
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    // Remove the deleted post from all relevant state arrays
+    setPosts((prev) => prev.filter((post) => post._id !== postId));
+    setDraftPosts((prev) => prev.filter((post) => post._id !== postId));
+    setLikedPosts((prev) => prev.filter((post) => post._id !== postId));
+    setBookmarkedPosts((prev) => prev.filter((post) => post._id !== postId));
+
+    // Refresh dashboard data to get updated counts
+    await refreshData();
+  };
+
   const statsConfig = [
     {
       label: "Total Posts",
@@ -386,6 +425,10 @@ function Dashboard() {
                                   ? () => navigate(`/write?id=${post._id}`)
                                   : undefined
                               }
+                              onPublish={
+                                tab.isDraft ? handlePublishDraft : undefined
+                              }
+                              onDelete={handleDeletePost}
                             />
                           </Grid>
                         ))}

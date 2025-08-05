@@ -10,62 +10,97 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Facebook,
   Twitter,
   Instagram,
   LinkedIn,
   Email,
-} from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
-import { useState } from 'react';
+} from "@mui/icons-material";
+import { Link as RouterLink } from "react-router-dom";
+import { useState } from "react";
+import { toast } from "react-toastify";
+import axios from "axios";
 
 function Footer() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle newsletter subscription
-    console.log('Subscribing email:', email);
-    setEmail('');
+
+    if (!email.trim()) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/newsletter/subscribe`,
+        {
+          email: email.trim(),
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setEmail("");
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to subscribe to newsletter";
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Box
       component="footer"
       sx={{
-        bgcolor: 'background.paper',
+        bgcolor: "background.paper",
         py: { xs: 4, sm: 6 },
-        mt: 'auto',
+        mt: "auto",
         borderTop: 1,
-        borderColor: 'divider',
+        borderColor: "divider",
       }}
     >
       <Container maxWidth="lg">
         <Grid container spacing={{ xs: 3, md: 4 }}>
           {/* About Section */}
           <Grid item xs={12} md={4}>
-            <Typography 
-              variant="h6" 
-              color="primary" 
+            <Typography
+              variant="h6"
+              color="primary"
               gutterBottom
-              sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}
+              sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
             >
               BlogVerse
             </Typography>
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
+            <Typography
+              variant="body2"
+              color="text.secondary"
               paragraph
-              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+              sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
             >
-              Share your stories, inspire the world. Join our community of writers
-              and readers to explore amazing content across various topics.
+              Share your stories, inspire the world. Join our community of
+              writers and readers to explore amazing content across various
+              topics.
             </Typography>
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+            <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
               <IconButton
                 color="primary"
                 component="a"
@@ -111,19 +146,19 @@ function Footer() {
 
           {/* Quick Links */}
           <Grid item xs={12} sm={6} md={4}>
-            <Typography 
-              variant="h6" 
-              color="text.primary" 
+            <Typography
+              variant="h6"
+              color="text.primary"
               gutterBottom
-              sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}
+              sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
             >
               Quick Links
             </Typography>
             <Box
               sx={{
-                display: 'flex',
-                flexDirection: { xs: 'row', sm: 'column' },
-                flexWrap: 'wrap',
+                display: "flex",
+                flexDirection: { xs: "row", sm: "column" },
+                flexWrap: "wrap",
                 gap: { xs: 2, sm: 1 },
               }}
             >
@@ -131,10 +166,10 @@ function Footer() {
                 component={RouterLink}
                 to="/about"
                 color="text.secondary"
-                sx={{ 
-                  textDecoration: 'none',
-                  '&:hover': { color: 'primary.main' },
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                sx={{
+                  textDecoration: "none",
+                  "&:hover": { color: "primary.main" },
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
                 }}
               >
                 About Us
@@ -143,10 +178,10 @@ function Footer() {
                 component={RouterLink}
                 to="/contact"
                 color="text.secondary"
-                sx={{ 
-                  textDecoration: 'none',
-                  '&:hover': { color: 'primary.main' },
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                sx={{
+                  textDecoration: "none",
+                  "&:hover": { color: "primary.main" },
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
                 }}
               >
                 Contact
@@ -155,10 +190,10 @@ function Footer() {
                 component={RouterLink}
                 to="/privacy-policy"
                 color="text.secondary"
-                sx={{ 
-                  textDecoration: 'none',
-                  '&:hover': { color: 'primary.main' },
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                sx={{
+                  textDecoration: "none",
+                  "&:hover": { color: "primary.main" },
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
                 }}
               >
                 Privacy Policy
@@ -167,10 +202,10 @@ function Footer() {
                 component={RouterLink}
                 to="/terms"
                 color="text.secondary"
-                sx={{ 
-                  textDecoration: 'none',
-                  '&:hover': { color: 'primary.main' },
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                sx={{
+                  textDecoration: "none",
+                  "&:hover": { color: "primary.main" },
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
                 }}
               >
                 Terms of Service
@@ -180,28 +215,29 @@ function Footer() {
 
           {/* Newsletter */}
           <Grid item xs={12} sm={6} md={4}>
-            <Typography 
-              variant="h6" 
-              color="text.primary" 
+            <Typography
+              variant="h6"
+              color="text.primary"
               gutterBottom
-              sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}
+              sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
             >
               Subscribe to Our Newsletter
             </Typography>
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
+            <Typography
+              variant="body2"
+              color="text.secondary"
               paragraph
-              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+              sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
             >
-              Get the latest updates and articles delivered straight to your inbox.
+              Get the latest updates and articles delivered straight to your
+              inbox.
             </Typography>
-            <Box 
-              component="form" 
+            <Box
+              component="form"
               onSubmit={handleSubscribe}
               sx={{
-                display: 'flex',
-                flexDirection: { xs: 'column', sm: 'column' },
+                display: "flex",
+                flexDirection: { xs: "column", sm: "column" },
                 gap: 2,
               }}
             >
@@ -211,9 +247,9 @@ function Footer() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                sx={{ 
-                  '& .MuiInputBase-input': {
-                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                sx={{
+                  "& .MuiInputBase-input": {
+                    fontSize: { xs: "0.875rem", sm: "1rem" },
                   },
                 }}
               />
@@ -223,8 +259,9 @@ function Footer() {
                 fullWidth
                 size={isMobile ? "small" : "medium"}
                 startIcon={<Email />}
+                disabled={isSubmitting}
               >
-                Subscribe
+                {isSubmitting ? "Subscribing..." : "Subscribe"}
               </Button>
             </Box>
           </Grid>
@@ -236,7 +273,7 @@ function Footer() {
           variant="body2"
           color="text.secondary"
           align="center"
-          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+          sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
         >
           © {new Date().getFullYear()} BlogVerse. All rights reserved.
         </Typography>
@@ -245,4 +282,4 @@ function Footer() {
   );
 }
 
-export default Footer; 
+export default Footer;

@@ -222,7 +222,6 @@ router.get("/stats", async (req, res) => {
 router.get("/category/:category", async (req, res) => {
   try {
     const category = decodeURIComponent(req.params.category);
-    console.log("Searching for category:", category);
 
     // Use case-insensitive regex match for category
     const blogs = await Blog.find({
@@ -232,7 +231,6 @@ router.get("/category/:category", async (req, res) => {
       .populate("user", "name")
       .select("title content category coverImage createdAt user");
 
-    console.log(`Found ${blogs.length} posts for category ${category}`);
     res.json(blogs);
   } catch (err) {
     console.error("Error fetching blogs by category:", err);
@@ -240,6 +238,25 @@ router.get("/category/:category", async (req, res) => {
       message: "Server error while fetching category blogs",
       error: err.message,
     });
+  }
+});
+
+// @route   GET api/blogs/drafts
+// @desc    Get user's draft posts
+// @access  Private
+router.get("/drafts", auth, async (req, res) => {
+  try {
+    const drafts = await Blog.find({
+      user: req.user.id,
+      status: "draft",
+    })
+      .sort({ createdAt: -1 })
+      .populate("user", "name");
+
+    res.json(drafts);
+  } catch (err) {
+    console.error("Error fetching drafts:", err);
+    res.status(500).json({ message: "Failed to fetch drafts" });
   }
 });
 
@@ -296,25 +313,6 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// @route   GET api/blogs/drafts
-// @desc    Get user's draft posts
-// @access  Private
-router.get("/drafts", auth, async (req, res) => {
-  try {
-    const drafts = await Blog.find({
-      user: req.user.id,
-      status: "draft",
-    })
-      .sort({ createdAt: -1 })
-      .populate("user", "name");
-
-    res.json(drafts);
-  } catch (err) {
-    console.error("Error fetching drafts:", err);
-    res.status(500).json({ message: "Failed to fetch drafts" });
-  }
-});
-
 // @route   POST api/blogs
 // @desc    Create a blog
 // @access  Private
@@ -323,15 +321,6 @@ router.post("/", auth, async (req, res) => {
     const { title, content, category, coverImage, isDraft } = req.body;
     const MAX_CONTENT_LENGTH = 100000; // 100KB limit
     const MAX_TITLE_LENGTH = 200;
-
-    // Debug logging
-    console.log("Received blog creation request:", {
-      titleLength: title?.length,
-      contentLength: content?.length,
-      category,
-      isDraft,
-      userId: req.user.id,
-    });
 
     // Content length validation first
     if (content && content.length > MAX_CONTENT_LENGTH) {
@@ -503,7 +492,7 @@ router.delete("/:id", auth, async (req, res) => {
       return res.status(401).json({ msg: "User not authorized" });
     }
 
-    await blog.remove();
+    await Blog.findByIdAndDelete(req.params.id);
     res.json({ msg: "Blog removed" });
   } catch (err) {
     console.error(err.message);
