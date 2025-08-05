@@ -3,6 +3,7 @@
 ## 🚀 Pre-Deployment Checklist
 
 ### 1. Environment Variables
+
 - [ ] Use `.env` for development (NODE_ENV=development)
 - [ ] Use `.env.production` for production deployment
 - [ ] Update `VITE_API_URL` in client/.env.production to your production API URL
@@ -13,6 +14,7 @@
 - [ ] Confirm email service credentials
 
 ### 2. Security Check
+
 - [ ] All console.log statements are wrapped in development checks
 - [ ] No sensitive data exposed in client-side code
 - [ ] CORS is properly configured for production domains
@@ -20,12 +22,14 @@
 - [ ] Security headers are configured (Helmet)
 
 ### 3. Performance
+
 - [ ] Bundle size optimized with code splitting
 - [ ] Images optimized and using CDN (Cloudinary)
 - [ ] Database indexes are properly set
 - [ ] Service worker enabled for caching
 
 ### 4. Monitoring
+
 - [ ] Error logging configured
 - [ ] Performance monitoring set up
 - [ ] Database monitoring enabled
@@ -33,27 +37,31 @@
 ## 📋 Deployment Steps
 
 ### Development Setup
+
 1. Ensure `.env` files are configured for development:
    - Server: `NODE_ENV=development`, `CLIENT_URL=http://localhost:3000`
    - Client: `VITE_API_URL=http://localhost:5000/api`
 2. Start development servers:
+
    ```bash
    # Terminal 1 - Server
    cd server
    npm run dev
-   
+
    # Terminal 2 - Client
    cd client
    npm run dev
    ```
 
 ### Client (Vercel)
+
 1. Connect your GitHub repository to Vercel
 2. Set environment variables in Vercel dashboard:
    - `VITE_API_URL=https://your-api-domain.vercel.app/api`
 3. Deploy from main branch
 
 ### Server (Vercel)
+
 1. Deploy server to Vercel
 2. Set environment variables in Vercel dashboard:
    - `NODE_ENV=production`
@@ -68,6 +76,7 @@
    - `EMAIL_PASSWORD=your-app-password`
 
 ### Post-Deployment
+
 1. Update client environment variable with actual server URL
 2. Test all functionality
 3. Monitor error logs
@@ -76,19 +85,23 @@
 ## 🔧 Production Configuration
 
 ### Database
+
 - MongoDB Atlas with production cluster
 - Connection pooling enabled
 - Proper indexes for performance
 
 ### CDN & Assets
+
 - Cloudinary for image uploads and optimization
 - Static assets served from Vercel CDN
 
 ### Email Service
+
 - Gmail SMTP with app-specific password
 - Fallback error handling for email failures
 
 ### Security
+
 - HTTPS enforced
 - CORS properly configured
 - Rate limiting enabled
@@ -108,6 +121,7 @@
 ## 🔧 Troubleshooting
 
 If you encounter module loading errors:
+
 1. Clear browser cache and hard refresh (Ctrl+Shift+R)
 2. Check Vercel build logs for errors
 3. Verify environment variables are set correctly
@@ -116,6 +130,7 @@ If you encounter module loading errors:
 ## 📞 Support
 
 If you encounter any issues during deployment, check:
+
 1. Vercel deployment logs
 2. Browser console for client errors
 3. Network tab for API call failures
