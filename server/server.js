@@ -74,12 +74,8 @@ app.use(
 
       const allowedOrigins =
         process.env.NODE_ENV === "production"
-          ? [process.env.CLIENT_URL, "https://blogverse-client.vercel.app"]
-          : [
-              "http://localhost:3000",
-              "http://127.0.0.1:3000",
-              "http://localhost:3001", // Backup port
-            ];
+          ? [process.env.CLIENT_URL]
+          : [process.env.CLIENT_URL || "http://localhost:3000"];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -129,7 +125,7 @@ const blogRoutes = require("./routes/blogs");
 const uploadRoutes = require("./routes/upload");
 const newsletterRoutes = require("./routes/newsletter");
 
-// Add root route handler for Vercel deployment
+// Add root route handler
 app.get("/", (req, res) => {
   res.json({
     message: "BlogVerse API is running",
