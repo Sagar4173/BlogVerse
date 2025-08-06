@@ -23,6 +23,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Box } from "@mui/material";
@@ -240,6 +241,8 @@ function App() {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                     <Route path="/terms" element={<TermsOfService />} />
+                    {/* Catch-all route for 404 pages */}
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Box>
                 <Footer />

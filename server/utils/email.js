@@ -293,11 +293,6 @@ exports.sendResetPasswordEmail = async (email, token) => {
                 <a href="${resetUrl}" class="button">Reset My Password 🔑</a>
               </div>
               
-              <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0;"><strong>Or copy and paste this link:</strong></p>
-                <p style="word-break: break-all; margin: 10px 0 0 0; font-size: 14px;">${resetUrl}</p>
-              </div>
-              
               <div class="warning">
                 <strong>Security Notice:</strong><br>
                 • This link will expire in 1 hour for your security<br>
