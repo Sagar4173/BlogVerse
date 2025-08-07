@@ -221,8 +221,9 @@ function UserProfile() {
         blog.title &&
         blog.content &&
         blog.category &&
-        blog.createdAt &&
-        blog.user
+        blog.createdAt
+      // Removed blog.user requirement since we're on user's profile page
+      // and the backend doesn't populate user field in this context
     );
   };
 

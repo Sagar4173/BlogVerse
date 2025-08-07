@@ -22,7 +22,7 @@ router.use(async (req, res, next) => {
 });
 
 // @route   GET api/blogs
-// @desc    Get all blogs
+// @desc    Get all blogs with optional pagination and sorting
 // @access  Public
 router.get("/", async (req, res) => {
   try {
@@ -36,22 +36,51 @@ router.get("/", async (req, res) => {
       });
     }
 
+    // Parse query parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const sortBy = req.query.sortBy || "recent"; // recent, popular, views
+    const skip = (page - 1) * limit;
+
     // Add a status field for filtering (published posts only)
     const query = { status: "published" };
 
-    // Use lean() for better performance - returns plain JS objects instead of Mongoose documents
-    const blogs = await Blog.find(query)
-      .sort({ createdAt: -1 })
-      .populate("user", "name")
-      .select("title content category coverImage createdAt user")
-      .lean()
-      .limit(50); // Add limit to prevent overwhelming the serverless function
-
-    if (!blogs) {
-      return res.json([]); // Return empty array as a fallback
+    // Determine sort order
+    let sort = { createdAt: -1 }; // default: recent posts first
+    if (sortBy === "popular") {
+      sort = { likesCount: -1, commentsCount: -1, createdAt: -1 };
+    } else if (sortBy === "views") {
+      sort = { views: -1, createdAt: -1 };
     }
 
-    return res.json(blogs);
+    // Use lean() for better performance - returns plain JS objects instead of Mongoose documents
+    const blogs = await Blog.find(query)
+      .sort(sort)
+      .populate("user", "name profilePicture")
+      .select(
+        "title content category coverImage createdAt user likesCount commentsCount views"
+      )
+      .lean()
+      .skip(skip)
+      .limit(limit);
+
+    // Get total count for pagination info
+    const total = await Blog.countDocuments(query);
+
+    if (!blogs) {
+      return res.json({ blogs: [], total: 0, page, limit }); // Return empty array as a fallback
+    }
+
+    // Return paginated response
+    return res.json({
+      blogs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page * limit < total,
+      hasPrevPage: page > 1,
+    });
   } catch (err) {
     // Enhanced error logging with more details
     console.error("Error fetching blogs:", {

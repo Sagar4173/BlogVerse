@@ -198,9 +198,11 @@ export const getBlog = async (id: string) => {
   return response.data;
 };
 
-export const getAllBlogs = async () => {
+export const getAllBlogs = async (
+  params: { page?: number; limit?: number; sortBy?: string } = {}
+) => {
   try {
-    const response = await axios.get(API_URL);
+    const response = await axios.get(API_URL, { params });
     return response.data;
   } catch (error: any) {
     console.error(

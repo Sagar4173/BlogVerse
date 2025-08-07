@@ -18,10 +18,6 @@ const categories = [
     description: "Latest tech trends, innovations, and digital transformations",
     color: "#1A237E",
     gradient: "linear-gradient(135deg, #1A237E 0%, #283593 100%)",
-    stats: {
-      posts: 1234,
-      trending: 89,
-    },
   },
   {
     id: 2,
@@ -30,10 +26,6 @@ const categories = [
     description: "UI/UX design principles, tools, and creative inspiration",
     color: "#B71C1C",
     gradient: "linear-gradient(135deg, #B71C1C 0%, #C62828 100%)",
-    stats: {
-      posts: 856,
-      trending: 45,
-    },
   },
   {
     id: 3,
@@ -42,10 +34,6 @@ const categories = [
     description: "Programming tutorials, coding tips, and best practices",
     color: "#1B5E20",
     gradient: "linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)",
-    stats: {
-      posts: 2156,
-      trending: 156,
-    },
   },
   {
     id: 4,
@@ -54,10 +42,6 @@ const categories = [
     description: "Entrepreneurship, startups, and business strategies",
     color: "#4A148C",
     gradient: "linear-gradient(135deg, #4A148C 0%, #6A1B9A 100%)",
-    stats: {
-      posts: 967,
-      trending: 67,
-    },
   },
   {
     id: 5,
@@ -66,10 +50,6 @@ const categories = [
     description: "Personal development, wellness, and lifestyle tips",
     color: "#E65100",
     gradient: "linear-gradient(135deg, #E65100 0%, #F57C00 100%)",
-    stats: {
-      posts: 1543,
-      trending: 98,
-    },
   },
   {
     id: 6,
@@ -78,10 +58,6 @@ const categories = [
     description: "Scientific discoveries, research, and innovations",
     color: "#01579B",
     gradient: "linear-gradient(135deg, #01579B 0%, #0277BD 100%)",
-    stats: {
-      posts: 789,
-      trending: 34,
-    },
   },
   {
     id: 7,
@@ -90,10 +66,6 @@ const categories = [
     description: "Recipes, cooking tips, and culinary adventures",
     color: "#BF360C",
     gradient: "linear-gradient(135deg, #BF360C 0%, #D84315 100%)",
-    stats: {
-      posts: 1123,
-      trending: 78,
-    },
   },
   {
     id: 8,
@@ -102,10 +74,6 @@ const categories = [
     description: "Travel guides, tips, and wanderlust inspiration",
     color: "#0D47A1",
     gradient: "linear-gradient(135deg, #0D47A1 0%, #1565C0 100%)",
-    stats: {
-      posts: 987,
-      trending: 56,
-    },
   },
   {
     id: 9,
@@ -114,10 +82,6 @@ const categories = [
     description: "Health tips, workout routines, and wellness advice",
     color: "#2E7D32",
     gradient: "linear-gradient(135deg, #2E7D32 0%, #388E3C 100%)",
-    stats: {
-      posts: 876,
-      trending: 45,
-    },
   },
   {
     id: 10,
@@ -126,10 +90,6 @@ const categories = [
     description: "Art, music, literature, and cultural insights",
     color: "#6A1B9A",
     gradient: "linear-gradient(135deg, #6A1B9A 0%, #7B1FA2 100%)",
-    stats: {
-      posts: 654,
-      trending: 32,
-    },
   },
   {
     id: 11,
@@ -138,10 +98,6 @@ const categories = [
     description: "Learning resources, study tips, and educational content",
     color: "#C2185B",
     gradient: "linear-gradient(135deg, #C2185B 0%, #D81B60 100%)",
-    stats: {
-      posts: 543,
-      trending: 28,
-    },
   },
   {
     id: 12,
@@ -151,10 +107,6 @@ const categories = [
       "Environmental issues, sustainability, and eco-friendly living",
     color: "#1B5E20",
     gradient: "linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)",
-    stats: {
-      posts: 432,
-      trending: 23,
-    },
   },
 ];
 

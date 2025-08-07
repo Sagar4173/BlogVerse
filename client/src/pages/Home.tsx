@@ -12,8 +12,12 @@ import {
   Chip,
   IconButton,
   useTheme,
+  CircularProgress,
+  Skeleton,
+  Alert,
 } from "@mui/material";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   Favorite,
   Comment,
@@ -25,107 +29,58 @@ import {
   Speed,
 } from "@mui/icons-material";
 import CategoryCards from "../components/CategoryCards";
+import { getAllBlogs } from "../services/blogService";
+import { getTopAuthors } from "../services/userService";
 
-// Sample blog data
-const featuredBlogs = [
-  {
-    id: 1,
-    title: "The Future of Web Development: AI and No-Code Revolution",
-    author: {
-      name: "Alex Chen",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100",
-    },
-    excerpt:
-      "Explore how artificial intelligence and no-code tools are transforming the landscape of web development, making it more accessible than ever.",
-    category: "Technology",
-    date: "March 20, 2024",
-    readTime: "6 min read",
-    likes: 324,
-    comments: 28,
-    image:
-      "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=800",
-  },
-  {
-    id: 2,
-    title: "Mastering Modern UI Design: Tips from Industry Experts",
-    author: {
-      name: "Sarah Williams",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100",
-    },
-    excerpt:
-      "Learn the latest trends and best practices in UI design from leading designers at top tech companies.",
-    category: "Design",
-    date: "March 19, 2024",
-    readTime: "8 min read",
-    likes: 287,
-    comments: 42,
-    image:
-      "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&q=80&w=800",
-  },
-  {
-    id: 3,
-    title: "Building Scalable Applications with Microservices",
-    author: {
-      name: "Michael Roberts",
-      avatar:
-        "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=100",
-    },
-    excerpt:
-      "A comprehensive guide to designing and implementing microservices architecture for modern applications.",
-    category: "Development",
-    date: "March 18, 2024",
-    readTime: "10 min read",
-    likes: 456,
-    comments: 35,
-    image:
-      "https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&q=80&w=800",
-  },
-];
+// Interface definitions for type safety
+interface Author {
+  id: string;
+  _id: string;
+  name: string;
+  avatar?: string;
+  role?: string;
+  description?: string;
+  expertise?: string[];
+  followers?: number;
+  articles?: number;
+}
 
-// Sample top authors data
-const topAuthors = [
-  {
-    id: 1,
-    name: "Alex Chen",
-    avatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100",
-    role: "Senior Tech Writer",
-    description:
-      "Passionate about AI and emerging technologies. Writing about the future of web development and digital transformation.",
-    followers: 12400,
-    articles: 156,
-    expertise: ["AI", "Web Development", "Technology"],
-  },
-  {
-    id: 2,
-    name: "Sarah Williams",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100",
-    role: "UI/UX Design Expert",
-    description:
-      "Award-winning designer sharing insights on modern UI/UX design principles and industry best practices.",
-    followers: 9800,
-    articles: 89,
-    expertise: ["UI Design", "UX", "Design Systems"],
-  },
-  {
-    id: 3,
-    name: "Michael Roberts",
-    avatar:
-      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=100",
-    role: "Software Architect",
-    description:
-      "Experienced architect specializing in scalable systems and microservices architecture. Sharing knowledge to help developers build better systems.",
-    followers: 15600,
-    articles: 234,
-    expertise: ["Architecture", "Microservices", "Cloud"],
-  },
-];
+interface FeaturedBlog {
+  id: string;
+  _id: string;
+  title: string;
+  content: string;
+  category: string;
+  image?: string;
+  author: {
+    name: string;
+    avatar?: string;
+  };
+  date: string;
+  readTime: string;
+  excerpt: string;
+  likes: number;
+  comments: number;
+  views: number;
+  createdAt: string;
+}
+
+// Why Blogverse item interface
+interface WhyBlogverseItem {
+  id: number;
+  title: string;
+  description: string;
+  icon: React.ReactElement;
+  color: string;
+  gradient: string;
+  hoverGradient: string;
+  iconBg: string;
+  cardBg: string;
+  cardHoverBg: string;
+}
 
 // Why Blogverse data
-const whyBlogverse = [
+const whyBlogverse: WhyBlogverseItem[] = [
   {
     id: 1,
     title: "Share Your Knowledge",
@@ -190,6 +145,185 @@ const whyBlogverse = [
 
 function Home() {
   const theme = useTheme();
+  const [featuredBlogs, setFeaturedBlogs] = useState<FeaturedBlog[]>([]);
+  const [topAuthors, setTopAuthors] = useState<Author[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchHomeData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [blogsResponse, authorsResponse] = await Promise.all([
+        getAllBlogs({ page: 1, limit: 6, sortBy: "popular" }),
+        getTopAuthors({ limit: 6 }),
+      ]);
+
+      console.log("Blogs response:", blogsResponse);
+      console.log("Authors response:", authorsResponse);
+      console.log("First blog:", blogsResponse.blogs?.[0]);
+      console.log(
+        "First author raw:",
+        authorsResponse?.authors?.[0] || authorsResponse?.[0]
+      );
+
+      // Transform blog data to match frontend expectations
+      const transformedBlogs: FeaturedBlog[] = (blogsResponse.blogs || []).map(
+        (blog: any): FeaturedBlog => ({
+          id: blog._id,
+          _id: blog._id,
+          title: blog.title,
+          content: blog.content,
+          category: blog.category,
+          image: blog.coverImage || "/placeholder-blog-image.jpg",
+          author: {
+            name: blog.user?.name || "Anonymous",
+            avatar: blog.user?.profilePicture || "/placeholder-avatar.jpg",
+          },
+          date: new Date(blog.createdAt).toLocaleDateString(),
+          readTime:
+            Math.ceil((blog.content?.split(" ").length || 0) / 200) +
+            " min read",
+          excerpt: blog.content
+            ? blog.content.replace(/<[^>]*>/g, "").substring(0, 150) + "..."
+            : "No excerpt available",
+          likes: blog.likesCount || 0,
+          comments: blog.commentsCount || 0,
+          views: blog.views || 0,
+          createdAt: blog.createdAt,
+        })
+      );
+
+      // Transform authors data to match frontend expectations
+      const transformedAuthors: Author[] = (
+        authorsResponse.authors ||
+        authorsResponse ||
+        []
+      ).map((author: any): Author => {
+        // Generate more meaningful roles based on author data
+        const generateRoleTitle = (author: any): string => {
+          if (
+            author.role &&
+            author.role.trim() !== "" &&
+            author.role !== "Writer"
+          ) {
+            return author.role;
+          }
+          if (
+            author.occupation &&
+            author.occupation.trim() !== "" &&
+            author.occupation !== "Writer"
+          ) {
+            return author.occupation;
+          }
+          if (author.expertise && author.expertise.length > 0) {
+            return `${author.expertise[0]} Specialist`;
+          }
+          if (author.articles >= 10) {
+            return "Prolific Writer";
+          }
+          if (author.followers >= 50) {
+            return "Popular Author";
+          }
+          if (author.followers >= 20) {
+            return "Community Leader";
+          }
+          return "Content Creator";
+        };
+
+        return {
+          id: author._id || author.id,
+          _id: author._id || author.id,
+          name: author.name || "Anonymous",
+          avatar:
+            author.avatar || author.profilePicture || "/placeholder-avatar.jpg",
+          role: generateRoleTitle(author),
+          description:
+            author.description ||
+            author.bio ||
+            "Passionate writer and content creator",
+          expertise: author.expertise || author.skills || [],
+          followers: author.followers || author.followersCount || 0,
+          articles: author.articles || author.postsCount || 0,
+        };
+      });
+
+      console.log("Transformed blogs:", transformedBlogs);
+      console.log("Transformed authors:", transformedAuthors);
+
+      setFeaturedBlogs(transformedBlogs);
+      setTopAuthors(transformedAuthors);
+    } catch (err) {
+      console.error("Error fetching home data:", err);
+      setError("Failed to load content. Please try again.");
+      // Set empty arrays as fallback
+      setFeaturedBlogs([]);
+      setTopAuthors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHomeData();
+  }, []);
+
+  // Show loading spinner while initial data is loading
+  if (loading && topAuthors.length === 0 && featuredBlogs.length === 0) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: `
+            linear-gradient(135deg, rgba(2, 73, 80, 0.05) 0%, rgba(15, 164, 175, 0.05) 100%),
+            #f0f8ff
+          `,
+          "@keyframes pulse": {
+            "0%": {
+              transform: "scale(1)",
+              opacity: 1,
+            },
+            "50%": {
+              transform: "scale(1.05)",
+              opacity: 0.8,
+            },
+            "100%": {
+              transform: "scale(1)",
+              opacity: 1,
+            },
+          },
+        }}
+      >
+        <CircularProgress
+          size={60}
+          sx={{
+            color: "primary.main",
+            mb: 3,
+            animation: "pulse 2s infinite",
+          }}
+        />
+        <Typography
+          variant="h6"
+          sx={{
+            background: "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            fontWeight: 600,
+            mb: 1,
+          }}
+        >
+          Loading BlogVerse...
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Fetching the latest blogs and authors for you
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -505,152 +639,87 @@ function Home() {
           >
             Top Authors
           </Typography>
+
+          {error && (
+            <Alert
+              severity="error"
+              sx={{ mb: 3, borderRadius: "12px" }}
+              onClose={() => setError(null)}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={fetchHomeData}
+                  disabled={loading}
+                >
+                  {loading ? <CircularProgress size={16} /> : "Retry"}
+                </Button>
+              }
+            >
+              {error}
+            </Alert>
+          )}
+
           <Grid
             container
             spacing={{ xs: 2, sm: 3, md: 4 }}
             sx={{ width: "100%", m: 0 }}
           >
-            {topAuthors.map((author) => (
-              <Grid item xs={12} sm={6} md={4} key={author.id}>
-                <Card
-                  sx={{
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    transition: "all 0.3s ease-in-out",
-                    background: "rgba(255, 255, 255, 0.7)",
-                    backdropFilter: "blur(10px)",
-                    borderRadius: "16px",
-                    overflow: "hidden",
-                    position: "relative",
-                    "&::before": {
-                      content: '""',
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: "4px",
-                      background:
-                        "linear-gradient(90deg, rgba(2, 73, 80, 0.8) 0%, rgba(15, 164, 175, 0.8) 100%)",
-                    },
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow:
-                        "0 20px 40px -12px rgba(0,0,0,0.1), 0 8px 16px -8px rgba(0,0,0,0.1)",
-                      background: "rgba(255, 255, 255, 0.8)",
-                    },
-                  }}
+            {loading ? (
+              // Loading skeletons for authors
+              Array.from({ length: 6 }).map((_, index) => (
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                  md={4}
+                  key={`author-skeleton-${index}`}
                 >
-                  <CardContent
+                  <Card
                     sx={{
-                      flexGrow: 1,
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      background: "rgba(255, 255, 255, 0.7)",
+                      backdropFilter: "blur(10px)",
+                      borderRadius: "16px",
+                      overflow: "hidden",
                       p: 3,
-                      position: "relative",
-                      "&::after": {
-                        content: '""',
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background:
-                          "radial-gradient(circle at top right, rgba(15, 164, 175, 0.03), transparent 70%)",
-                        pointerEvents: "none",
-                      },
                     }}
                   >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        mb: 2,
-                        position: "relative",
-                        zIndex: 1,
-                      }}
-                    >
-                      <Avatar
-                        src={author.avatar}
-                        alt={author.name}
-                        sx={{
-                          width: 80,
-                          height: 80,
-                          mr: 2,
-                          border: "3px solid",
-                          borderColor: "primary.main",
-                          boxShadow: "0 4px 12px rgba(15, 164, 175, 0.2)",
-                          transition: "all 0.3s ease-in-out",
-                          "&:hover": {
-                            transform: "scale(1.05)",
-                          },
-                        }}
+                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                      <Skeleton
+                        variant="circular"
+                        width={80}
+                        height={80}
+                        sx={{ mr: 2 }}
                       />
-                      <Box>
-                        <Typography
-                          variant="h6"
-                          component="h3"
-                          sx={{
-                            fontWeight: 600,
-                            background:
-                              "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                          }}
-                        >
-                          {author.name}
-                        </Typography>
-                        <Typography
-                          variant="subtitle2"
-                          sx={{
-                            mb: 0.5,
-                            color: "primary.main",
-                            fontWeight: 500,
-                          }}
-                        >
-                          {author.role}
-                        </Typography>
+                      <Box sx={{ flex: 1 }}>
+                        <Skeleton
+                          variant="text"
+                          width="80%"
+                          height={28}
+                          sx={{ mb: 0.5 }}
+                        />
+                        <Skeleton variant="text" width="60%" height={20} />
                       </Box>
                     </Box>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{
-                        mb: 2,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {author.description}
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 1,
-                        mb: 2,
-                        position: "relative",
-                        zIndex: 1,
-                      }}
-                    >
-                      {author.expertise.map((skill) => (
-                        <Chip
-                          key={skill}
-                          label={skill}
-                          size="small"
-                          sx={{
-                            background:
-                              "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
-                            color: "white",
-                            fontWeight: 500,
-                            "&:hover": {
-                              transform: "translateY(-1px)",
-                              boxShadow: "0 4px 8px rgba(15, 164, 175, 0.2)",
-                            },
-                          }}
-                        />
-                      ))}
+                    <Skeleton
+                      variant="text"
+                      width="100%"
+                      height={20}
+                      sx={{ mb: 1 }}
+                    />
+                    <Skeleton
+                      variant="text"
+                      width="90%"
+                      height={20}
+                      sx={{ mb: 2 }}
+                    />
+                    <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+                      <Skeleton variant="rounded" width={60} height={24} />
+                      <Skeleton variant="rounded" width={80} height={24} />
+                      <Skeleton variant="rounded" width={70} height={24} />
                     </Box>
                     <Box
                       sx={{
@@ -658,45 +727,269 @@ function Home() {
                         justifyContent: "space-between",
                         mt: "auto",
                         pt: 2,
-                        borderTop: "1px solid",
-                        borderColor: "divider",
-                        position: "relative",
-                        zIndex: 1,
                       }}
                     >
                       <Box>
-                        <Typography
-                          variant="subtitle2"
-                          sx={{
-                            fontWeight: 600,
-                            color: "primary.main",
-                          }}
-                        >
-                          {author.followers.toLocaleString()}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Followers
-                        </Typography>
+                        <Skeleton variant="text" width={40} height={24} />
+                        <Skeleton variant="text" width={60} height={16} />
                       </Box>
                       <Box>
-                        <Typography
-                          variant="subtitle2"
-                          sx={{
-                            fontWeight: 600,
-                            color: "primary.main",
-                          }}
-                        >
-                          {author.articles}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Articles
-                        </Typography>
+                        <Skeleton variant="text" width={30} height={24} />
+                        <Skeleton variant="text" width={50} height={16} />
                       </Box>
                     </Box>
-                  </CardContent>
-                </Card>
+                  </Card>
+                </Grid>
+              ))
+            ) : topAuthors.length === 0 ? (
+              <Grid item xs={12}>
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    No authors found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Check back later for featured authors
+                  </Typography>
+                </Box>
               </Grid>
-            ))}
+            ) : (
+              topAuthors.map((author: Author) => (
+                <Grid item xs={12} sm={6} md={4} key={author.id}>
+                  <Card
+                    sx={{
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      transition: "all 0.3s ease-in-out",
+                      background: "rgba(255, 255, 255, 0.7)",
+                      backdropFilter: "blur(10px)",
+                      borderRadius: "16px",
+                      overflow: "hidden",
+                      position: "relative",
+                      "&::before": {
+                        content: '""',
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: "4px",
+                        background:
+                          "linear-gradient(90deg, rgba(2, 73, 80, 0.8) 0%, rgba(15, 164, 175, 0.8) 100%)",
+                      },
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        boxShadow:
+                          "0 20px 40px -12px rgba(0,0,0,0.1), 0 8px 16px -8px rgba(0,0,0,0.1)",
+                        background: "rgba(255, 255, 255, 0.8)",
+                      },
+                    }}
+                  >
+                    <CardContent
+                      sx={{
+                        flexGrow: 1,
+                        p: 3,
+                        position: "relative",
+                        "&::after": {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background:
+                            "radial-gradient(circle at top right, rgba(15, 164, 175, 0.03), transparent 70%)",
+                          pointerEvents: "none",
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          mb: 2,
+                          position: "relative",
+                          zIndex: 1,
+                        }}
+                      >
+                        <Avatar
+                          src={
+                            author.avatar && author.avatar !== ""
+                              ? author.avatar
+                              : undefined
+                          }
+                          alt={author.name}
+                          sx={{
+                            width: 80,
+                            height: 80,
+                            mr: 2,
+                            border: "3px solid",
+                            borderColor: "primary.main",
+                            boxShadow: "0 4px 12px rgba(15, 164, 175, 0.2)",
+                            transition: "all 0.3s ease-in-out",
+                            fontSize: "1.5rem",
+                            fontWeight: 600,
+                            bgcolor:
+                              !author.avatar || author.avatar === ""
+                                ? "primary.main"
+                                : undefined,
+                            "&:hover": {
+                              transform: "scale(1.05)",
+                            },
+                          }}
+                        >
+                          {(!author.avatar || author.avatar === "") &&
+                          author.name
+                            ? author.name.charAt(0).toUpperCase()
+                            : ""}
+                        </Avatar>
+                        <Box>
+                          <Typography
+                            variant="h6"
+                            component="h3"
+                            sx={{
+                              fontWeight: 600,
+                              background:
+                                "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                            }}
+                          >
+                            {author.name}
+                          </Typography>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              mb: 0.5,
+                              color: "primary.main",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {author.role &&
+                            author.role.trim() !== "" &&
+                            author.role !== "Writer"
+                              ? author.role
+                              : author.expertise && author.expertise.length > 0
+                              ? `${author.expertise[0]} Specialist`
+                              : "Content Creator"}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          mb: 2,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          lineHeight: 1.6,
+                          minHeight: "3.6em", // Ensure consistent height even with short descriptions
+                        }}
+                      >
+                        {author.description && author.description.trim() !== ""
+                          ? author.description
+                          : `Passionate writer with ${
+                              author.articles || 0
+                            } published articles. Join ${
+                              author.followers || 0
+                            } followers on this creative journey.`}
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 1,
+                          mb: 2,
+                          position: "relative",
+                          zIndex: 1,
+                          minHeight: "32px", // Ensure consistent height even without skills
+                        }}
+                      >
+                        {author.expertise && author.expertise.length > 0 ? (
+                          author.expertise.slice(0, 3).map((skill: string) => (
+                            <Chip
+                              key={skill}
+                              label={skill}
+                              size="small"
+                              sx={{
+                                background:
+                                  "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
+                                color: "white",
+                                fontWeight: 500,
+                                "&:hover": {
+                                  transform: "translateY(-1px)",
+                                  boxShadow:
+                                    "0 4px 8px rgba(15, 164, 175, 0.2)",
+                                },
+                              }}
+                            />
+                          ))
+                        ) : (
+                          <Chip
+                            label={
+                              author.role &&
+                              author.role.trim() !== "" &&
+                              author.role !== "Writer"
+                                ? author.role
+                                : "Content Creator"
+                            }
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              borderColor: "primary.main",
+                              color: "primary.main",
+                              fontWeight: 500,
+                            }}
+                          />
+                        )}
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mt: "auto",
+                          pt: 2,
+                          borderTop: "1px solid",
+                          borderColor: "divider",
+                          position: "relative",
+                          zIndex: 1,
+                        }}
+                      >
+                        <Box>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 600,
+                              color: "primary.main",
+                            }}
+                          >
+                            {author.followers?.toLocaleString() || 0}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Followers
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 600,
+                              color: "primary.main",
+                            }}
+                          >
+                            {author.articles || 0}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Articles
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            )}
           </Grid>
         </Container>
       </Box>
@@ -733,270 +1026,373 @@ function Home() {
           >
             Featured Blogs
           </Typography>
+
           <Grid container spacing={4}>
-            {featuredBlogs.map((blog) => (
-              <Grid item xs={12} sm={6} md={4} key={blog.id}>
-                <Card
-                  sx={{
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    transition: "all 0.5s ease-in-out",
-                    width: "100%",
-                    background: "rgba(255, 255, 255, 0.7)",
-                    backdropFilter: "blur(10px)",
-                    borderRadius: "20px",
-                    overflow: "hidden",
-                    position: "relative",
-                    "&::before": {
-                      content: '""',
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: "6px",
-                      background:
-                        "linear-gradient(90deg, rgba(2, 73, 80, 0.8) 0%, rgba(15, 164, 175, 0.8) 100%)",
-                      zIndex: 1,
-                    },
-                    "&:hover": {
-                      transform: "translateY(-8px)",
-                      boxShadow:
-                        "0 20px 40px -12px rgba(0,0,0,0.1), 0 8px 16px -8px rgba(0,0,0,0.1)",
-                      background: "rgba(255, 255, 255, 0.8)",
-                      "& .MuiCardMedia-root": {
-                        transform: "scale(1.05)",
-                      },
-                      "& .MuiCardHeader-root": {
-                        background: "rgba(255, 255, 255, 0.9)",
-                      },
-                    },
-                  }}
-                >
-                  <CardMedia
-                    component="img"
-                    height="240"
-                    image={blog.image}
-                    alt={blog.title}
+            {loading ? (
+              // Loading skeletons for blogs
+              Array.from({ length: 6 }).map((_, index) => (
+                <Grid item xs={12} sm={6} md={4} key={`blog-skeleton-${index}`}>
+                  <Card
                     sx={{
-                      objectFit: "cover",
-                      transition: "transform 0.5s ease-in-out",
-                      width: "100%",
-                      aspectRatio: "16/9",
-                      position: "relative",
-                      "&::after": {
-                        content: '""',
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background:
-                          "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%)",
-                        pointerEvents: "none",
-                      },
-                    }}
-                  />
-                  <CardHeader
-                    sx={{
-                      padding: "20px",
-                      background: "rgba(255, 255, 255, 0.8)",
-                      transition: "all 0.3s ease-in-out",
-                      "& .MuiCardHeader-avatar": {
-                        marginRight: "12px",
-                      },
-                    }}
-                    avatar={
-                      <Avatar
-                        src={blog.author.avatar}
-                        alt={blog.author.name}
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          border: "3px solid",
-                          borderColor: "primary.main",
-                          boxShadow: "0 4px 12px rgba(15, 164, 175, 0.2)",
-                          transition: "all 0.3s ease-in-out",
-                          "&:hover": {
-                            transform: "scale(1.1) rotate(5deg)",
-                          },
-                        }}
-                      />
-                    }
-                    title={
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          fontWeight: 600,
-                          background:
-                            "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          fontSize: "1.1rem",
-                        }}
-                      >
-                        {blog.author.name}
-                      </Typography>
-                    }
-                    subheader={
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          {blog.date}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          •
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {blog.readTime}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                  <CardContent
-                    sx={{
-                      flexGrow: 1,
-                      position: "relative",
-                      padding: "20px",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
                       background: "rgba(255, 255, 255, 0.7)",
-                      "&::after": {
+                      backdropFilter: "blur(10px)",
+                      borderRadius: "20px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Skeleton variant="rectangular" width="100%" height={240} />
+                    <CardHeader
+                      sx={{ padding: "20px" }}
+                      avatar={
+                        <Skeleton variant="circular" width={48} height={48} />
+                      }
+                      title={
+                        <Skeleton variant="text" width="60%" height={28} />
+                      }
+                      subheader={
+                        <Skeleton variant="text" width="40%" height={20} />
+                      }
+                    />
+                    <CardContent sx={{ padding: "20px", pt: 0 }}>
+                      <Skeleton
+                        variant="rounded"
+                        width={80}
+                        height={24}
+                        sx={{ mb: 2 }}
+                      />
+                      <Skeleton
+                        variant="text"
+                        width="100%"
+                        height={32}
+                        sx={{ mb: 1 }}
+                      />
+                      <Skeleton
+                        variant="text"
+                        width="80%"
+                        height={32}
+                        sx={{ mb: 2 }}
+                      />
+                      <Skeleton
+                        variant="text"
+                        width="100%"
+                        height={20}
+                        sx={{ mb: 1 }}
+                      />
+                      <Skeleton
+                        variant="text"
+                        width="90%"
+                        height={20}
+                        sx={{ mb: 1 }}
+                      />
+                      <Skeleton
+                        variant="text"
+                        width="70%"
+                        height={20}
+                        sx={{ mb: 2 }}
+                      />
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          pt: 2,
+                        }}
+                      >
+                        <Box
+                          sx={{ display: "flex", gap: 1, alignItems: "center" }}
+                        >
+                          <Skeleton variant="circular" width={32} height={32} />
+                          <Skeleton variant="text" width={20} height={20} />
+                          <Skeleton variant="circular" width={32} height={32} />
+                          <Skeleton variant="text" width={20} height={20} />
+                        </Box>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <Skeleton variant="circular" width={32} height={32} />
+                          <Skeleton variant="circular" width={32} height={32} />
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            ) : featuredBlogs.length === 0 ? (
+              <Grid item xs={12}>
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    No featured blogs found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Check back later for featured content
+                  </Typography>
+                </Box>
+              </Grid>
+            ) : (
+              featuredBlogs.map((blog: FeaturedBlog) => (
+                <Grid item xs={12} sm={6} md={4} key={blog.id}>
+                  <Card
+                    sx={{
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      transition: "all 0.5s ease-in-out",
+                      width: "100%",
+                      background: "rgba(255, 255, 255, 0.7)",
+                      backdropFilter: "blur(10px)",
+                      borderRadius: "20px",
+                      overflow: "hidden",
+                      position: "relative",
+                      "&::before": {
                         content: '""',
                         position: "absolute",
                         top: 0,
                         left: 0,
                         right: 0,
-                        bottom: 0,
+                        height: "6px",
                         background:
-                          "radial-gradient(circle at top right, rgba(15, 164, 175, 0.03), transparent 70%)",
-                        pointerEvents: "none",
+                          "linear-gradient(90deg, rgba(2, 73, 80, 0.8) 0%, rgba(15, 164, 175, 0.8) 100%)",
+                        zIndex: 1,
+                      },
+                      "&:hover": {
+                        transform: "translateY(-8px)",
+                        boxShadow:
+                          "0 20px 40px -12px rgba(0,0,0,0.1), 0 8px 16px -8px rgba(0,0,0,0.1)",
+                        background: "rgba(255, 255, 255, 0.8)",
+                        "& .MuiCardMedia-root": {
+                          transform: "scale(1.05)",
+                        },
+                        "& .MuiCardHeader-root": {
+                          background: "rgba(255, 255, 255, 0.9)",
+                        },
                       },
                     }}
                   >
-                    <Chip
-                      label={blog.category}
-                      size="small"
+                    <CardMedia
+                      component="img"
+                      height="240"
+                      image={blog.image}
+                      alt={blog.title}
                       sx={{
-                        mb: 2,
-                        background:
-                          "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
-                        color: "white",
-                        fontWeight: 500,
-                        height: "28px",
-                        "&:hover": {
-                          transform: "translateY(-1px)",
-                          boxShadow: "0 4px 8px rgba(15, 164, 175, 0.2)",
+                        objectFit: "cover",
+                        transition: "transform 0.5s ease-in-out",
+                        width: "100%",
+                        aspectRatio: "16/9",
+                        position: "relative",
+                        "&::after": {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background:
+                            "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%)",
+                          pointerEvents: "none",
                         },
                       }}
                     />
-                    <Typography
-                      variant="h6"
-                      component="h3"
-                      gutterBottom
+                    <CardHeader
                       sx={{
-                        fontWeight: 600,
-                        mb: 2,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                        lineHeight: 1.4,
-                        fontSize: "1.25rem",
-                        color: "#1a1a1a",
+                        padding: "20px",
+                        background: "rgba(255, 255, 255, 0.8)",
+                        transition: "all 0.3s ease-in-out",
+                        "& .MuiCardHeader-avatar": {
+                          marginRight: "12px",
+                        },
                       }}
-                    >
-                      {blog.title}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{
-                        mb: 2,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                        lineHeight: 1.6,
-                        fontSize: "0.95rem",
-                      }}
-                    >
-                      {blog.excerpt}
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        mt: "auto",
-                        pt: 2,
-                        borderTop: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Box sx={{ display: "flex", gap: 1 }}>
-                        <IconButton
-                          size="small"
-                          color="error"
+                      avatar={
+                        <Avatar
+                          src={blog.author.avatar}
+                          alt={blog.author.name}
                           sx={{
+                            width: 48,
+                            height: 48,
+                            border: "3px solid",
+                            borderColor: "primary.main",
+                            boxShadow: "0 4px 12px rgba(15, 164, 175, 0.2)",
+                            transition: "all 0.3s ease-in-out",
                             "&:hover": {
-                              transform: "scale(1.1)",
-                              color: "error.main",
-                              bgcolor: "rgba(211, 47, 47, 0.1)",
+                              transform: "scale(1.1) rotate(5deg)",
                             },
                           }}
+                        />
+                      }
+                      title={
+                        <Typography
+                          variant="subtitle1"
+                          sx={{
+                            fontWeight: 600,
+                            background:
+                              "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent",
+                            fontSize: "1.1rem",
+                          }}
                         >
-                          <Favorite sx={{ fontSize: 20 }} />
-                        </IconButton>
-                        <Typography variant="caption" color="text.secondary">
-                          {blog.likes}
+                          {blog.author.name}
                         </Typography>
-                        <IconButton
-                          size="small"
-                          sx={{
-                            "&:hover": {
-                              transform: "scale(1.1)",
-                              color: "primary.main",
-                              bgcolor: "rgba(15, 164, 175, 0.1)",
-                            },
-                          }}
+                      }
+                      subheader={
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
                         >
-                          <Comment sx={{ fontSize: 20 }} />
-                        </IconButton>
-                        <Typography variant="caption" color="text.secondary">
-                          {blog.comments}
-                        </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {blog.date}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            •
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {blog.readTime}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <CardContent
+                      sx={{
+                        flexGrow: 1,
+                        position: "relative",
+                        padding: "20px",
+                        background: "rgba(255, 255, 255, 0.7)",
+                        "&::after": {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background:
+                            "radial-gradient(circle at top right, rgba(15, 164, 175, 0.03), transparent 70%)",
+                          pointerEvents: "none",
+                        },
+                      }}
+                    >
+                      <Chip
+                        label={blog.category}
+                        size="small"
+                        sx={{
+                          mb: 2,
+                          background:
+                            "linear-gradient(45deg, #024950 30%, #0FA4AF 90%)",
+                          color: "white",
+                          fontWeight: 500,
+                          height: "28px",
+                          "&:hover": {
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 8px rgba(15, 164, 175, 0.2)",
+                          },
+                        }}
+                      />
+                      <Typography
+                        variant="h6"
+                        component="h3"
+                        gutterBottom
+                        sx={{
+                          fontWeight: 600,
+                          mb: 2,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          lineHeight: 1.4,
+                          fontSize: "1.25rem",
+                          color: "#1a1a1a",
+                        }}
+                      >
+                        {blog.title}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          mb: 2,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          lineHeight: 1.6,
+                          fontSize: "0.95rem",
+                        }}
+                      >
+                        {blog.excerpt}
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          mt: "auto",
+                          pt: 2,
+                          borderTop: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            sx={{
+                              "&:hover": {
+                                transform: "scale(1.1)",
+                                color: "error.main",
+                                bgcolor: "rgba(211, 47, 47, 0.1)",
+                              },
+                            }}
+                          >
+                            <Favorite sx={{ fontSize: 20 }} />
+                          </IconButton>
+                          <Typography variant="caption" color="text.secondary">
+                            {blog.likes}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            sx={{
+                              "&:hover": {
+                                transform: "scale(1.1)",
+                                color: "primary.main",
+                                bgcolor: "rgba(15, 164, 175, 0.1)",
+                              },
+                            }}
+                          >
+                            <Comment sx={{ fontSize: 20 }} />
+                          </IconButton>
+                          <Typography variant="caption" color="text.secondary">
+                            {blog.comments}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <IconButton
+                            size="small"
+                            sx={{
+                              "&:hover": {
+                                transform: "scale(1.1)",
+                                color: "primary.main",
+                                bgcolor: "rgba(15, 164, 175, 0.1)",
+                              },
+                            }}
+                          >
+                            <Share sx={{ fontSize: 20 }} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            sx={{
+                              "&:hover": {
+                                transform: "scale(1.1)",
+                                color: "primary.main",
+                                bgcolor: "rgba(15, 164, 175, 0.1)",
+                              },
+                            }}
+                          >
+                            <Bookmark sx={{ fontSize: 20 }} />
+                          </IconButton>
+                        </Box>
                       </Box>
-                      <Box>
-                        <IconButton
-                          size="small"
-                          sx={{
-                            "&:hover": {
-                              transform: "scale(1.1)",
-                              color: "primary.main",
-                              bgcolor: "rgba(15, 164, 175, 0.1)",
-                            },
-                          }}
-                        >
-                          <Share sx={{ fontSize: 20 }} />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          sx={{
-                            "&:hover": {
-                              transform: "scale(1.1)",
-                              color: "primary.main",
-                              bgcolor: "rgba(15, 164, 175, 0.1)",
-                            },
-                          }}
-                        >
-                          <Bookmark sx={{ fontSize: 20 }} />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            )}
           </Grid>
         </Container>
       </Box>
@@ -1042,7 +1438,7 @@ function Home() {
             spacing={{ xs: 2, sm: 3, md: 4 }}
             sx={{ width: "100%", m: 0 }}
           >
-            {whyBlogverse.map((item) => (
+            {whyBlogverse.map((item: WhyBlogverseItem) => (
               <Grid item xs={12} sm={6} md={3} key={item.id}>
                 <Box
                   sx={{

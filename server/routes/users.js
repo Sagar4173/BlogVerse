@@ -735,4 +735,130 @@ router.get("/:id/activity", async (req, res) => {
   }
 });
 
+// @route   GET api/users/top-authors
+// @desc    Get top authors based on followers and posts
+// @access  Public
+router.get("/top-authors", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 6;
+
+    const topAuthors = await User.aggregate([
+      {
+        $match: {
+          role: { $ne: "admin" }, // Exclude admin users
+        },
+      },
+      {
+        $lookup: {
+          from: "blogs",
+          localField: "_id",
+          foreignField: "user",
+          as: "blogs",
+          pipeline: [
+            { $match: { status: "published" } },
+            { $project: { _id: 1, likesCount: 1, commentsCount: 1, views: 1 } },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          followersCount: { $size: { $ifNull: ["$followers", []] } },
+          postsCount: { $size: "$blogs" },
+          totalLikes: { $sum: "$blogs.likesCount" },
+          totalViews: { $sum: "$blogs.views" },
+          // Calculate engagement score
+          engagementScore: {
+            $add: [
+              { $multiply: [{ $size: { $ifNull: ["$followers", []] } }, 10] },
+              { $multiply: [{ $size: "$blogs" }, 20] },
+              { $multiply: [{ $sum: "$blogs.likesCount" }, 5] },
+              { $multiply: [{ $sum: "$blogs.views" }, 0.1] },
+            ],
+          },
+        },
+      },
+      {
+        $match: {
+          $or: [
+            { postsCount: { $gte: 1 } }, // Has at least 1 post
+            { followersCount: { $gte: 5 } }, // Or has at least 5 followers
+          ],
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          bio: 1,
+          profilePicture: 1,
+          expertise: 1,
+          occupation: 1,
+          followersCount: 1,
+          postsCount: 1,
+          totalLikes: 1,
+          totalViews: 1,
+          engagementScore: 1,
+          createdAt: 1,
+        },
+      },
+      {
+        $sort: { engagementScore: -1, followersCount: -1, postsCount: -1 },
+      },
+      {
+        $limit: limit,
+      },
+    ]);
+
+    // Sample roles based on activity patterns
+    const generateRoleFromActivity = (author) => {
+      if (author.postsCount >= 10) {
+        return "Prolific Writer";
+      } else if (author.totalLikes >= 50) {
+        return "Popular Author";
+      } else if (author.followersCount >= 20) {
+        return "Community Leader";
+      } else if (author.expertise && author.expertise.length > 0) {
+        return `${author.expertise[0]} Expert`;
+      }
+      return "Writer";
+    };
+
+    const authorsWithFormatted = topAuthors.map((author) => {
+      const dynamicRole = author.occupation || generateRoleFromActivity(author);
+
+      return {
+        id: author._id,
+        _id: author._id,
+        name: author.name || "Anonymous",
+        avatar: author.profilePicture || "",
+        profilePicture: author.profilePicture || "",
+        role: author.role === "admin" ? "Admin" : dynamicRole,
+        occupation: author.occupation || dynamicRole,
+        description:
+          author.bio ||
+          `Passionate writer with ${author.postsCount} published articles.`,
+        bio:
+          author.bio ||
+          `Passionate writer with ${author.postsCount} published articles.`,
+        followers: author.followersCount,
+        followersCount: author.followersCount,
+        articles: author.postsCount,
+        postsCount: author.postsCount,
+        expertise: author.expertise || [],
+        skills: author.expertise || [],
+        totalLikes: author.totalLikes || 0,
+        totalViews: author.totalViews || 0,
+      };
+    });
+
+    res.json({
+      authors: authorsWithFormatted,
+      total: authorsWithFormatted.length,
+    });
+  } catch (err) {
+    console.error("Error fetching top authors:", err);
+    res.status(500).json({ message: "Failed to fetch top authors" });
+  }
+});
+
 module.exports = router;

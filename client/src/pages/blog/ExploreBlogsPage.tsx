@@ -45,7 +45,12 @@ function ExploreBlogsPage() {
         const blogsData = await getAllBlogs();
         const categoriesData = await getCategories();
 
-        setPosts(blogsData);
+        // Handle both old format (array) and new format (object with blogs property)
+        const blogsArray = Array.isArray(blogsData)
+          ? blogsData
+          : blogsData.blogs || [];
+
+        setPosts(blogsArray);
         setCategories(categoriesData);
       } catch (error: any) {
         console.error("Failed to fetch blogs:", error.message || error);

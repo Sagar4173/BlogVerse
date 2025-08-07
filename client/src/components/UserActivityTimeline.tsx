@@ -284,54 +284,8 @@ export default function UserActivityTimeline({
         console.error("Error fetching activities:", err);
         setError(err.message || "Failed to load activity timeline");
 
-        // Fallback to mock data if API fails
-        const mockActivities: ActivityItem[] = [
-          {
-            _id: "1",
-            type: "post_created",
-            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            user: {
-              _id: userId,
-              name: "User",
-              profilePicture: "/avatar1.jpg",
-            },
-            blog: { _id: "blog1", title: "Getting Started with React Hooks" },
-          },
-          {
-            _id: "2",
-            type: "post_liked",
-            createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-            user: {
-              _id: userId,
-              name: "User",
-              profilePicture: "/avatar1.jpg",
-            },
-            blog: { _id: "blog2", title: "Advanced TypeScript Patterns" },
-            metadata: { likeCount: 15 },
-          },
-          {
-            _id: "3",
-            type: "comment_added",
-            createdAt: new Date(
-              Date.now() - 1 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            user: {
-              _id: userId,
-              name: "User",
-              profilePicture: "/avatar1.jpg",
-            },
-            blog: {
-              _id: "blog3",
-              title: "Building Scalable Node.js Applications",
-            },
-            metadata: {
-              commentText:
-                "Great article! This really helped me understand the concepts better.",
-            },
-          },
-        ];
-
-        setActivities(mockActivities);
+        // Set empty activities instead of mock data
+        setActivities([]);
       } finally {
         setLoading(false);
       }

@@ -234,3 +234,17 @@ export const getUserActivity = async (
     );
   }
 };
+
+export const getTopAuthors = async ({ limit = 6 } = {}) => {
+  try {
+    const response = await axios.get(`${API_URL}/top-authors`, {
+      params: { limit },
+    });
+    return response.data.authors || [];
+  } catch (error: any) {
+    console.error("Error fetching top authors:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch top authors"
+    );
+  }
+};
