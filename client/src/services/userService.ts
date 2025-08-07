@@ -43,23 +43,35 @@ export const followUser = async (userId: string): Promise<FollowResponse> => {
   }
 };
 
-export const unfollowUser = async (userId: string) => {
+export const unfollowUser = async (userId: string): Promise<FollowResponse> => {
   const token = localStorage.getItem("token");
   try {
-    const response = await axios.post(
+    const response = await axios.post<FollowResponse>(
       `${API_URL}/${userId}/unfollow`,
       {},
       {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
-    // Return the updated state immediately
-    return {
-      isFollowing: false,
-      followersCount: response.data.followers?.length || 0,
-      followingCount: response.data.following?.length || 0,
-    };
+
+    if (!response.data) {
+      throw new Error("No response data");
+    }
+
+    return response.data;
   } catch (error: any) {
+    if (
+      error.response?.status === 400 &&
+      error.response.data?.message === "Not following this user"
+    ) {
+      return {
+        isFollowing: false,
+        followers: error.response.data.followers || 0,
+        following: error.response.data.following || 0,
+        message: "Not following this user",
+      };
+    }
+
     const message = error.response?.data?.message || "Failed to unfollow user";
     console.error("Unfollow error:", error);
     throw new Error(message);

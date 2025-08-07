@@ -139,7 +139,6 @@ Add any other context about the problem here.
 - **Website:** [https://blogversehub.vercel.app](https://blogversehub.vercel.app)
 - **Repository:** [https://github.com/Sagar4173/BlogVerse](https://github.com/Sagar4173/BlogVerse)
 - **Type:** Open-source project
-- **Started:** 2023
 - **Mission:** Democratizing content creation and building communities through blogging
 
 ## Support Hours

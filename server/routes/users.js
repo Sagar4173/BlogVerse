@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const auth = require("../middleware/auth");
+const optionalAuth = require("../middleware/optionalAuth");
 const Blog = require("../models/Blog");
 const sendNotificationEmail = require("../utils/sendNotificationEmail");
 const dbConnect = require("../utils/dbConnect");
@@ -184,7 +185,14 @@ router.post("/:id/unfollow", auth, async (req, res) => {
     );
 
     await Promise.all([currentUser.save(), userToUnfollow.save()]);
-    res.json({ msg: "User unfollowed successfully" });
+
+    // Send response with updated counts (consistent with follow response)
+    res.json({
+      message: "User unfollowed successfully",
+      followers: userToUnfollow.followers.length,
+      following: currentUser.following.length,
+      isFollowing: false,
+    });
   } catch (err) {
     res.status(500).send("Server Error");
   }
@@ -348,8 +356,8 @@ router.get("/dashboard/activity", auth, async (req, res) => {
 
 // @route   GET api/users/profile/:id
 // @desc    Get user profile by ID with blog posts
-// @access  Public
-router.get("/profile/:id", async (req, res) => {
+// @access  Public (with optional authentication for follow status)
+router.get("/profile/:id", optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
