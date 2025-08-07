@@ -21,6 +21,7 @@ import {
   Article,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
+import { getUserActivity } from "../services/userService";
 
 // Simple time formatting utility
 const formatTimeAgo = (dateString: string): string => {
@@ -276,19 +277,12 @@ export default function UserActivityTimeline({
         setLoading(true);
         setError(null);
 
-        // Try to fetch from API first
-        try {
-          const response = await fetch(
-            `/api/users/${userId}/activity?limit=${limit}`
-          );
-          if (response.ok) {
-            const data = await response.json();
-            setActivities(data.activities || []);
-            return;
-          }
-        } catch (apiError) {
-          console.error("API call failed, using mock data:", apiError);
-        }
+        // Use the proper API service
+        const data = await getUserActivity(userId, limit);
+        setActivities(data.activities || []);
+      } catch (err: any) {
+        console.error("Error fetching activities:", err);
+        setError(err.message || "Failed to load activity timeline");
 
         // Fallback to mock data if API fails
         const mockActivities: ActivityItem[] = [
@@ -298,7 +292,7 @@ export default function UserActivityTimeline({
             createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
             user: {
               _id: userId,
-              name: "John Doe",
+              name: "User",
               profilePicture: "/avatar1.jpg",
             },
             blog: { _id: "blog1", title: "Getting Started with React Hooks" },
@@ -309,7 +303,7 @@ export default function UserActivityTimeline({
             createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
             user: {
               _id: userId,
-              name: "John Doe",
+              name: "User",
               profilePicture: "/avatar1.jpg",
             },
             blog: { _id: "blog2", title: "Advanced TypeScript Patterns" },
@@ -323,7 +317,7 @@ export default function UserActivityTimeline({
             ).toISOString(),
             user: {
               _id: userId,
-              name: "John Doe",
+              name: "User",
               profilePicture: "/avatar1.jpg",
             },
             blog: {
@@ -335,40 +329,9 @@ export default function UserActivityTimeline({
                 "Great article! This really helped me understand the concepts better.",
             },
           },
-          {
-            _id: "4",
-            type: "user_followed",
-            createdAt: new Date(
-              Date.now() - 2 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            user: {
-              _id: userId,
-              name: "John Doe",
-              profilePicture: "/avatar1.jpg",
-            },
-            targetUser: { _id: "user2", name: "Jane Smith" },
-          },
-          {
-            _id: "5",
-            type: "post_bookmarked",
-            createdAt: new Date(
-              Date.now() - 3 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            user: {
-              _id: userId,
-              name: "John Doe",
-              profilePicture: "/avatar1.jpg",
-            },
-            blog: { _id: "blog4", title: "Modern CSS Grid Techniques" },
-          },
         ];
 
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setActivities(mockActivities.slice(0, limit));
-      } catch (err) {
-        console.error("Error fetching activities:", err);
-        setError("Failed to load activity timeline");
+        setActivities(mockActivities);
       } finally {
         setLoading(false);
       }

@@ -402,12 +402,38 @@ router.get("/profile/:id", optionalAuth, async (req, res) => {
       );
     }
 
-    // Calculate total views
+    // Calculate comprehensive stats
     const totalViews = blogs.reduce((sum, blog) => sum + (blog.views || 0), 0);
+    const totalLikes = blogs.reduce(
+      (sum, blog) => sum + (blog.likesCount || 0),
+      0
+    );
+    const totalComments = blogs.reduce(
+      (sum, blog) => sum + (blog.commentsCount || 0),
+      0
+    );
+
+    // Get user's bookmarked posts count
+    const totalBookmarks = user.bookmarks ? user.bookmarks.length : 0;
+
+    // Calculate engagement rate (likes + comments per post)
+    const engagementRate =
+      postsCount > 0
+        ? Math.round(((totalLikes + totalComments) / postsCount) * 100) / 100
+        : 0;
+
+    // Calculate average read time (assuming 200 words per minute)
+    const totalWords = blogs.reduce((sum, blog) => {
+      const wordCount = blog.content ? blog.content.split(" ").length : 0;
+      return sum + wordCount;
+    }, 0);
+    const averageReadTime =
+      postsCount > 0
+        ? Math.round((totalWords / postsCount / 200) * 100) / 100
+        : 0;
 
     // Get top category
     const categories = blogs.map((blog) => blog.category).filter(Boolean);
-
     const topCategory =
       categories.length > 0
         ? [...new Set(categories)].sort(
@@ -416,6 +442,10 @@ router.get("/profile/:id", optionalAuth, async (req, res) => {
               categories.filter((v) => v === a).length
           )[0]
         : "N/A";
+
+    // Calculate reputation score based on activity
+    const reputation =
+      totalLikes * 10 + totalComments * 5 + totalViews * 0.1 + postsCount * 20;
 
     const userProfile = {
       _id: user._id,
@@ -440,6 +470,47 @@ router.get("/profile/:id", optionalAuth, async (req, res) => {
       joinedDate: user.createdAt,
       totalViews,
       topCategory,
+      isVerified: user.isVerified || false,
+      reputation: Math.round(reputation),
+      activityStats: {
+        totalLikes,
+        totalComments,
+        totalBookmarks,
+        engagementRate,
+        averageReadTime,
+      },
+      recentAchievements: [
+        ...(postsCount >= 10
+          ? [
+              {
+                title: "Prolific Writer",
+                description: `Published ${postsCount} blog posts`,
+                date: new Date().toISOString(),
+                icon: "📝",
+              },
+            ]
+          : []),
+        ...(totalLikes >= 100
+          ? [
+              {
+                title: "Community Favorite",
+                description: `Received ${totalLikes} likes`,
+                date: new Date().toISOString(),
+                icon: "❤️",
+              },
+            ]
+          : []),
+        ...(totalViews >= 1000
+          ? [
+              {
+                title: "Popular Author",
+                description: `Achieved ${totalViews} total views`,
+                date: new Date().toISOString(),
+                icon: "👁️",
+              },
+            ]
+          : []),
+      ].slice(0, 3),
     };
 
     res.json(userProfile);
@@ -534,34 +605,129 @@ router.get("/:id/activity", async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
+    const user = await User.findById(id).select("name profilePicture");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    let activities = [];
+
     // Get user's blog posts (creation activity)
     const userBlogs = await Blog.find({ user: id })
       .populate("user", "name profilePicture")
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
-      .skip(parseInt(offset));
+      .select("title createdAt likesCount commentsCount views");
 
-    // Create activity items from blog posts
-    const activities = userBlogs.map((blog) => ({
-      _id: blog._id + "_created",
-      type: "post_created",
-      createdAt: blog.createdAt,
-      user: blog.user,
-      blog: {
-        _id: blog._id,
-        title: blog.title,
-      },
-    }));
+    // Add blog creation activities
+    userBlogs.forEach((blog) => {
+      activities.push({
+        _id: blog._id + "_created",
+        type: "post_created",
+        createdAt: blog.createdAt,
+        user: user,
+        blog: {
+          _id: blog._id,
+          title: blog.title,
+        },
+        metadata: {
+          views: blog.views || 0,
+          likes: blog.likesCount || 0,
+          comments: blog.commentsCount || 0,
+        },
+      });
+    });
 
-    // Future enhancement: Add other activity types like likes, comments, follows
-    // For now, we'll just show blog creation activities
+    // Get blogs where user has liked (recent likes)
+    const likedBlogs = await Blog.find({ "likes.user": id })
+      .populate("user", "name profilePicture")
+      .sort({ "likes.createdAt": -1 })
+      .limit(10)
+      .select("title likes");
+
+    likedBlogs.forEach((blog) => {
+      const userLike = blog.likes.find((like) => like.user.toString() === id);
+      if (userLike) {
+        activities.push({
+          _id: blog._id + "_liked",
+          type: "post_liked",
+          createdAt: userLike.createdAt || blog.createdAt,
+          user: user,
+          blog: {
+            _id: blog._id,
+            title: blog.title,
+          },
+          metadata: {
+            likeCount: blog.likes.length,
+          },
+        });
+      }
+    });
+
+    // Get blogs where user has commented (recent comments)
+    const commentedBlogs = await Blog.find({ "comments.user": id })
+      .populate("user", "name profilePicture")
+      .sort({ "comments.createdAt": -1 })
+      .limit(10)
+      .select("title comments");
+
+    commentedBlogs.forEach((blog) => {
+      const userComments = blog.comments.filter(
+        (comment) => comment.user.toString() === id
+      );
+      userComments.forEach((comment) => {
+        activities.push({
+          _id: blog._id + "_comment_" + comment._id,
+          type: "comment_added",
+          createdAt: comment.createdAt,
+          user: user,
+          blog: {
+            _id: blog._id,
+            title: blog.title,
+          },
+          metadata: {
+            commentText: comment.comment,
+          },
+        });
+      });
+    });
+
+    // Get user following activity (recent follows)
+    const currentUser = await User.findById(id).select("following");
+    if (currentUser && currentUser.following) {
+      const recentFollows = await User.find({
+        _id: { $in: currentUser.following.slice(-10) },
+      }).select("name profilePicture");
+
+      recentFollows.forEach((followedUser) => {
+        activities.push({
+          _id: followedUser._id + "_followed",
+          type: "user_followed",
+          createdAt: new Date(
+            Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
+          ), // Mock recent dates
+          user: user,
+          targetUser: {
+            _id: followedUser._id,
+            name: followedUser.name,
+            profilePicture: followedUser.profilePicture,
+          },
+        });
+      });
+    }
 
     // Sort all activities by creation date
     activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+    // Apply pagination
+    const paginatedActivities = activities.slice(
+      parseInt(offset),
+      parseInt(offset) + parseInt(limit)
+    );
+
     res.json({
-      activities: activities.slice(0, parseInt(limit)),
-      hasMore: activities.length > parseInt(limit),
+      activities: paginatedActivities,
+      hasMore: activities.length > parseInt(offset) + parseInt(limit),
+      total: activities.length,
     });
   } catch (err) {
     console.error("Error fetching user activity:", err);

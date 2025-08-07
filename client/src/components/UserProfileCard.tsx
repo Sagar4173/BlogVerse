@@ -14,9 +14,6 @@ import {
   IconButton,
   Stack,
   Divider,
-  Badge,
-  Paper,
-  Zoom,
 } from "@mui/material";
 import {
   PersonAdd,
@@ -29,20 +26,16 @@ import {
   Twitter,
   LinkedIn,
   Instagram,
-  Email,
-  MoreVert,
   Star,
   Verified,
   TrendingUp,
   EmojiEvents,
-  Favorite,
 } from "@mui/icons-material";
 import { followUser, unfollowUser } from "../services/userService";
 import { toast } from "react-toastify";
 import { alpha } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import FollowersListDialog from "./FollowersListDialog";
-import { motion } from "framer-motion";
 
 interface UserProfileCardProps {
   user: {

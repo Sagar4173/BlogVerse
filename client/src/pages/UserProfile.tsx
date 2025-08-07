@@ -5,19 +5,16 @@ import {
   Grid,
   Box,
   Typography,
-  CircularProgress,
   Tabs,
   Tab,
   Paper,
   Chip,
-  Divider,
   useTheme,
   alpha,
   Button,
   IconButton,
   Tooltip,
   Card,
-  CardContent,
   Stack,
   Avatar,
   LinearProgress,
@@ -29,9 +26,6 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from "@mui/material";
 import {
   TrendingUp,
@@ -40,13 +34,11 @@ import {
   Schedule,
   Share,
   Report,
-  ExpandMore,
   EmojiEvents,
   Star,
   LocalFireDepartment,
   Timeline,
   BookmarkBorder,
-  FavoriteBorder,
   Comment,
   ThumbUp,
   Category,
@@ -55,12 +47,8 @@ import {
   Work,
   School,
   Language,
-  Email,
-  Phone,
-  Public,
-  Lock,
   Verified,
-  TrendingFlat,
+  Public,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { getUserProfile } from "../services/userService";
@@ -200,7 +188,31 @@ function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState(0);
-  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+
+  // Debug function to validate profile data
+  const validateProfileData = (profile: UserProfile) => {
+    const requiredFields = ["_id", "name"];
+    const missingFields = requiredFields.filter(
+      (field) => !profile[field as keyof UserProfile]
+    );
+
+    if (missingFields.length > 0) {
+      console.warn("Missing required profile fields:", missingFields);
+    }
+
+    // Log available stats
+    console.log("Profile data validation:", {
+      hasActivityStats: !!profile.activityStats,
+      hasBlogs: Array.isArray(profile.blogs) && profile.blogs.length > 0,
+      hasAchievements:
+        Array.isArray(profile.recentAchievements) &&
+        profile.recentAchievements.length > 0,
+      hasSocialLinks:
+        !!profile.socialLinks && Object.keys(profile.socialLinks).length > 0,
+      hasExpertise:
+        Array.isArray(profile.expertise) && profile.expertise.length > 0,
+    });
+  };
 
   const filterValidBlogs = (blogs: any[]) => {
     return blogs.filter(
@@ -275,14 +287,50 @@ function UserProfile() {
           return;
         }
 
+        console.log("Fetching profile for user:", userId);
         const data = await getUserProfile(userId);
+
         if (data) {
+          // Debug logging to verify all data is present
+          console.log("Profile data received:", {
+            name: data.name,
+            followers: data.followers,
+            following: data.following,
+            postsCount: data.postsCount,
+            totalViews: data.totalViews,
+            reputation: data.reputation,
+            activityStats: data.activityStats,
+            recentAchievements: data.recentAchievements,
+            socialLinks: data.socialLinks,
+            blogs: data.blogs?.length || 0,
+          });
+
+          // Validate profile data
+          validateProfileData(data);
+
           data.blogs = filterValidBlogs(data.blogs || []);
           setProfile(data);
+
+          // Toast success message with key stats
+          toast.success(
+            `Profile loaded! ${data.postsCount || 0} posts, ${
+              data.totalViews || 0
+            } views`,
+            {
+              position: "bottom-right",
+              autoClose: 2000,
+            }
+          );
+        } else {
+          setError("No profile data received");
         }
       } catch (error: any) {
         console.error("Profile fetch error:", error);
-        setError(error.message || "Failed to load profile");
+        const errorMessage = error.message || "Failed to load profile";
+        setError(errorMessage);
+        toast.error(`Failed to load profile: ${errorMessage}`, {
+          position: "bottom-right",
+        });
       } finally {
         setLoading(false);
       }
@@ -470,7 +518,7 @@ function UserProfile() {
                       const repInfo = getReputationLevel(profile.reputation);
                       return (
                         <Chip
-                          icon={repInfo.icon}
+                          {...(repInfo.icon && { icon: repInfo.icon })}
                           label={repInfo.level}
                           size="small"
                           sx={{
@@ -522,12 +570,22 @@ function UserProfile() {
                 user={{
                   ...profile,
                   isFollowing: profile.isFollowing || false,
+                  // Ensure all fields are properly passed
+                  socialLinks: profile.socialLinks || {},
+                  expertise: profile.expertise || [],
+                  location: profile.location || "",
+                  occupation: profile.occupation || "",
+                  isVerified: profile.isVerified || false,
+                  reputation: profile.reputation || 0,
+                  topCategory: profile.topCategory || "N/A",
                 }}
                 onFollowChange={(isFollowing, newFollowerCount) => {
                   console.log("UserProfile: Follow status changed", {
                     isFollowing,
                     newFollowerCount,
+                    previousFollowers: profile.followers,
                   });
+
                   setProfile((prev) =>
                     prev
                       ? {
@@ -540,9 +598,19 @@ function UserProfile() {
                         }
                       : null
                   );
+
+                  // Show feedback toast
+                  toast.success(
+                    isFollowing ? "Now following user!" : "Unfollowed user",
+                    {
+                      position: "bottom-right",
+                      autoClose: 2000,
+                    }
+                  );
                 }}
                 compact={false}
                 showStats={true}
+                isLoading={loading}
               />
             </motion.div>
 
@@ -680,31 +748,34 @@ function UserProfile() {
                     🔥 Activity Metrics
                   </Typography>
                   <Stack spacing={2}>
-                    {ACTIVITY_METRICS.map((metric, index) => (
-                      <Box
-                        key={index}
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          p: 2,
-                          bgcolor: alpha(metric.color, 0.1),
-                          borderRadius: 2,
-                          border: `1px solid ${alpha(metric.color, 0.2)}`,
-                        }}
-                      >
-                        <Box sx={{ color: metric.color, mr: 2 }}>
-                          {metric.icon}
+                    {ACTIVITY_METRICS.map((metric, index) => {
+                      const resolvedColor = getThemeColor(metric.color);
+                      return (
+                        <Box
+                          key={index}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            p: 2,
+                            bgcolor: alpha(resolvedColor, 0.1),
+                            borderRadius: 2,
+                            border: `1px solid ${alpha(resolvedColor, 0.2)}`,
+                          }}
+                        >
+                          <Box sx={{ color: resolvedColor, mr: 2 }}>
+                            {metric.icon}
+                          </Box>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {metric.label}
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {metric.getValue(profile)}
+                            </Typography>
+                          </Box>
                         </Box>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {metric.label}
-                          </Typography>
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            {metric.getValue(profile)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    ))}
+                      );
+                    })}
                   </Stack>
                 </Paper>
               </motion.div>
@@ -1213,13 +1284,138 @@ function UserProfile() {
               {activeTab === 2 && (
                 <Fade in timeout={300}>
                   <Box>
-                    <Typography
-                      variant="h5"
-                      gutterBottom
-                      sx={{ fontWeight: 700, mb: 3 }}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 3,
+                      }}
                     >
-                      🎯 Recent Activity
-                    </Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                        🎯 Recent Activity
+                      </Typography>
+                      {profile?.activityStats && (
+                        <Stack direction="row" spacing={1}>
+                          <Chip
+                            icon={<ThumbUp />}
+                            label={`${profile.activityStats.totalLikes} Likes`}
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                          />
+                          <Chip
+                            icon={<Comment />}
+                            label={`${profile.activityStats.totalComments} Comments`}
+                            size="small"
+                            color="info"
+                            variant="outlined"
+                          />
+                        </Stack>
+                      )}
+                    </Box>
+
+                    {/* Activity Statistics Overview */}
+                    {profile?.activityStats && (
+                      <Paper
+                        elevation={2}
+                        sx={{
+                          p: 3,
+                          mb: 3,
+                          borderRadius: 4,
+                          background: `linear-gradient(135deg, ${alpha(
+                            theme.palette.primary.main,
+                            0.05
+                          )} 0%, ${alpha(
+                            theme.palette.secondary.main,
+                            0.05
+                          )} 100%)`,
+                          border: `1px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.1
+                          )}`,
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          gutterBottom
+                          sx={{ fontWeight: 600, mb: 2 }}
+                        >
+                          📊 Activity Summary
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={6} sm={3}>
+                            <Box sx={{ textAlign: "center" }}>
+                              <Typography
+                                variant="h4"
+                                color="error.main"
+                                sx={{ fontWeight: 700 }}
+                              >
+                                {profile.activityStats.totalLikes.toLocaleString()}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                Total Likes
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <Box sx={{ textAlign: "center" }}>
+                              <Typography
+                                variant="h4"
+                                color="info.main"
+                                sx={{ fontWeight: 700 }}
+                              >
+                                {profile.activityStats.totalComments.toLocaleString()}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                Comments
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <Box sx={{ textAlign: "center" }}>
+                              <Typography
+                                variant="h4"
+                                color="success.main"
+                                sx={{ fontWeight: 700 }}
+                              >
+                                {profile.activityStats.engagementRate}%
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                Engagement
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <Box sx={{ textAlign: "center" }}>
+                              <Typography
+                                variant="h4"
+                                color="warning.main"
+                                sx={{ fontWeight: 700 }}
+                              >
+                                {profile.activityStats.totalBookmarks.toLocaleString()}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                Bookmarks
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </Paper>
+                    )}
+
                     <Paper
                       elevation={2}
                       sx={{
@@ -1231,8 +1427,23 @@ function UserProfile() {
                         )}`,
                       }}
                     >
-                      {userId && (
+                      {userId ? (
                         <UserActivityTimeline userId={userId} limit={20} />
+                      ) : (
+                        <Box
+                          sx={{
+                            p: 4,
+                            textAlign: "center",
+                            color: "text.secondary",
+                          }}
+                        >
+                          <Typography variant="h6">
+                            Unable to load activity timeline
+                          </Typography>
+                          <Typography variant="body2">
+                            User ID is not available
+                          </Typography>
+                        </Box>
                       )}
                     </Paper>
                   </Box>
@@ -1243,15 +1454,28 @@ function UserProfile() {
               {activeTab === 3 && (
                 <Fade in timeout={300}>
                   <Stack spacing={3}>
-                    <Typography
-                      variant="h5"
-                      gutterBottom
-                      sx={{ fontWeight: 700 }}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
                     >
-                      📊 Profile Insights
-                    </Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                        📊 Profile Insights
+                      </Typography>
+                      {profile?.reputation && (
+                        <Chip
+                          icon={<EmojiEvents />}
+                          label={`Reputation: ${profile.reputation.toLocaleString()}`}
+                          color="warning"
+                          variant="filled"
+                          sx={{ fontWeight: 600 }}
+                        />
+                      )}
+                    </Box>
 
-                    {/* Writing Style Analysis */}
+                    {/* Enhanced Writing Style Analysis */}
                     <Paper
                       elevation={2}
                       sx={{
@@ -1269,55 +1493,160 @@ function UserProfile() {
                         gutterBottom
                         sx={{ fontWeight: 600, mb: 3 }}
                       >
-                        Writing Style Analysis
+                        ✍️ Writing & Engagement Analytics
                       </Typography>
                       <Grid container spacing={3}>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={12} sm={3}>
                           <Box sx={{ textAlign: "center" }}>
-                            <Typography
-                              variant="h4"
-                              color="primary.main"
-                              sx={{ fontWeight: 700 }}
+                            <Box
+                              sx={{
+                                width: 80,
+                                height: 80,
+                                borderRadius: "50%",
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mx: "auto",
+                                mb: 2,
+                                border: `3px solid ${theme.palette.primary.main}`,
+                              }}
                             >
-                              {profile?.activityStats?.averageReadTime || 5}min
+                              <Typography
+                                variant="h4"
+                                color="primary.main"
+                                sx={{ fontWeight: 700 }}
+                              >
+                                {profile?.activityStats?.averageReadTime || 5}
+                              </Typography>
+                            </Box>
+                            <Typography
+                              variant="h6"
+                              color="primary.main"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              Minutes
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               Avg. Read Time
                             </Typography>
                           </Box>
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={12} sm={3}>
                           <Box sx={{ textAlign: "center" }}>
-                            <Typography
-                              variant="h4"
-                              color="success.main"
-                              sx={{ fontWeight: 700 }}
+                            <Box
+                              sx={{
+                                width: 80,
+                                height: 80,
+                                borderRadius: "50%",
+                                bgcolor: alpha(theme.palette.success.main, 0.1),
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mx: "auto",
+                                mb: 2,
+                                border: `3px solid ${theme.palette.success.main}`,
+                              }}
                             >
-                              {profile?.activityStats?.engagementRate || 12}%
+                              <Typography
+                                variant="h4"
+                                color="success.main"
+                                sx={{ fontWeight: 700 }}
+                              >
+                                {profile?.activityStats?.engagementRate || 12}
+                              </Typography>
+                            </Box>
+                            <Typography
+                              variant="h6"
+                              color="success.main"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              Percent
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               Engagement Rate
                             </Typography>
                           </Box>
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={12} sm={3}>
                           <Box sx={{ textAlign: "center" }}>
-                            <Typography
-                              variant="h4"
-                              color="warning.main"
-                              sx={{ fontWeight: 700 }}
+                            <Box
+                              sx={{
+                                width: 80,
+                                height: 80,
+                                borderRadius: "50%",
+                                bgcolor: alpha(theme.palette.warning.main, 0.1),
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mx: "auto",
+                                mb: 2,
+                                border: `3px solid ${theme.palette.warning.main}`,
+                              }}
                             >
-                              {profile?.topCategory || "Tech"}
+                              <Typography
+                                variant="body2"
+                                color="warning.main"
+                                sx={{ fontWeight: 700, textAlign: "center" }}
+                              >
+                                {profile?.topCategory || "Tech"}
+                              </Typography>
+                            </Box>
+                            <Typography
+                              variant="h6"
+                              color="warning.main"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              Category
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              Top Category
+                              Most Popular
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <Box sx={{ textAlign: "center" }}>
+                            <Box
+                              sx={{
+                                width: 80,
+                                height: 80,
+                                borderRadius: "50%",
+                                bgcolor: alpha(theme.palette.error.main, 0.1),
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mx: "auto",
+                                mb: 2,
+                                border: `3px solid ${theme.palette.error.main}`,
+                              }}
+                            >
+                              <Typography
+                                variant="h4"
+                                color="error.main"
+                                sx={{ fontWeight: 700 }}
+                              >
+                                {Math.round(
+                                  (profile?.totalViews || 0) /
+                                    Math.max(profile?.postsCount || 1, 1)
+                                )}
+                              </Typography>
+                            </Box>
+                            <Typography
+                              variant="h6"
+                              color="error.main"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              Views
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Per Post
                             </Typography>
                           </Box>
                         </Grid>
                       </Grid>
                     </Paper>
 
-                    {/* Content Performance */}
+                    {/* Content Performance with Enhanced Visuals */}
                     <Paper
                       elevation={2}
                       sx={{
@@ -1335,32 +1664,60 @@ function UserProfile() {
                         gutterBottom
                         sx={{ fontWeight: 600, mb: 3 }}
                       >
-                        Content Performance
+                        🚀 Performance Metrics
                       </Typography>
 
-                      <Stack spacing={2}>
+                      <Stack spacing={3}>
                         {/* Views Progress */}
                         <Box>
                           <Box
                             sx={{
                               display: "flex",
                               justifyContent: "space-between",
+                              alignItems: "center",
                               mb: 1,
                             }}
                           >
-                            <Typography variant="body2">Total Views</Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography
+                              variant="body1"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              <Visibility
+                                sx={{ mr: 1, verticalAlign: "middle" }}
+                              />
+                              Total Views
+                            </Typography>
+                            <Typography
+                              variant="h6"
+                              color="primary.main"
+                              sx={{ fontWeight: 700 }}
+                            >
                               {(profile?.totalViews || 0).toLocaleString()}
                             </Typography>
                           </Box>
                           <LinearProgress
                             variant="determinate"
                             value={Math.min(
-                              ((profile?.totalViews || 0) / 1000) * 100,
+                              ((profile?.totalViews || 0) / 10000) * 100,
                               100
                             )}
-                            sx={{ height: 8, borderRadius: 4 }}
+                            sx={{
+                              height: 12,
+                              borderRadius: 6,
+                              bgcolor: alpha(theme.palette.primary.main, 0.1),
+                              "& .MuiLinearProgress-bar": {
+                                borderRadius: 6,
+                                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                              },
+                            }}
                           />
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ mt: 0.5 }}
+                          >
+                            Target: 10K views
+                          </Typography>
                         </Box>
 
                         {/* Likes Progress */}
@@ -1369,11 +1726,24 @@ function UserProfile() {
                             sx={{
                               display: "flex",
                               justifyContent: "space-between",
+                              alignItems: "center",
                               mb: 1,
                             }}
                           >
-                            <Typography variant="body2">Total Likes</Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography
+                              variant="body1"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              <ThumbUp
+                                sx={{ mr: 1, verticalAlign: "middle" }}
+                              />
+                              Total Likes
+                            </Typography>
+                            <Typography
+                              variant="h6"
+                              color="error.main"
+                              sx={{ fontWeight: 700 }}
+                            >
                               {(
                                 profile?.activityStats?.totalLikes || 0
                               ).toLocaleString()}
@@ -1383,18 +1753,27 @@ function UserProfile() {
                             variant="determinate"
                             value={Math.min(
                               ((profile?.activityStats?.totalLikes || 0) /
-                                100) *
+                                1000) *
                                 100,
                               100
                             )}
                             sx={{
-                              height: 8,
-                              borderRadius: 4,
+                              height: 12,
+                              borderRadius: 6,
+                              bgcolor: alpha(theme.palette.error.main, 0.1),
                               "& .MuiLinearProgress-bar": {
+                                borderRadius: 6,
                                 bgcolor: theme.palette.error.main,
                               },
                             }}
                           />
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ mt: 0.5 }}
+                          >
+                            Target: 1K likes
+                          </Typography>
                         </Box>
 
                         {/* Comments Progress */}
@@ -1403,13 +1782,24 @@ function UserProfile() {
                             sx={{
                               display: "flex",
                               justifyContent: "space-between",
+                              alignItems: "center",
                               mb: 1,
                             }}
                           >
-                            <Typography variant="body2">
+                            <Typography
+                              variant="body1"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              <Comment
+                                sx={{ mr: 1, verticalAlign: "middle" }}
+                              />
                               Total Comments
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography
+                              variant="h6"
+                              color="info.main"
+                              sx={{ fontWeight: 700 }}
+                            >
                               {(
                                 profile?.activityStats?.totalComments || 0
                               ).toLocaleString()}
@@ -1419,31 +1809,109 @@ function UserProfile() {
                             variant="determinate"
                             value={Math.min(
                               ((profile?.activityStats?.totalComments || 0) /
-                                50) *
+                                500) *
                                 100,
                               100
                             )}
                             sx={{
-                              height: 8,
-                              borderRadius: 4,
+                              height: 12,
+                              borderRadius: 6,
+                              bgcolor: alpha(theme.palette.info.main, 0.1),
                               "& .MuiLinearProgress-bar": {
+                                borderRadius: 6,
                                 bgcolor: theme.palette.info.main,
                               },
                             }}
                           />
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ mt: 0.5 }}
+                          >
+                            Target: 500 comments
+                          </Typography>
                         </Box>
                       </Stack>
                     </Paper>
 
-                    {/* Growth Trends */}
+                    {/* Recent Achievements Display */}
+                    {profile?.recentAchievements &&
+                      profile.recentAchievements.length > 0 && (
+                        <Paper
+                          elevation={2}
+                          sx={{
+                            p: 4,
+                            borderRadius: 4,
+                            bgcolor: alpha(theme.palette.warning.main, 0.02),
+                            border: `1px solid ${alpha(
+                              theme.palette.warning.main,
+                              0.2
+                            )}`,
+                          }}
+                        >
+                          <Typography
+                            variant="h6"
+                            gutterBottom
+                            sx={{ fontWeight: 600, mb: 3 }}
+                          >
+                            🏆 Recent Achievements
+                          </Typography>
+                          <Grid container spacing={2}>
+                            {profile.recentAchievements.map(
+                              (achievement, index) => (
+                                <Grid item xs={12} sm={6} md={4} key={index}>
+                                  <Card
+                                    elevation={1}
+                                    sx={{
+                                      p: 2,
+                                      textAlign: "center",
+                                      bgcolor: alpha(
+                                        theme.palette.warning.main,
+                                        0.05
+                                      ),
+                                      border: `1px solid ${alpha(
+                                        theme.palette.warning.main,
+                                        0.2
+                                      )}`,
+                                      transition: "all 0.3s ease",
+                                      "&:hover": {
+                                        transform: "translateY(-4px)",
+                                        boxShadow: 3,
+                                      },
+                                    }}
+                                  >
+                                    <Typography variant="h4" sx={{ mb: 1 }}>
+                                      {achievement.icon}
+                                    </Typography>
+                                    <Typography
+                                      variant="h6"
+                                      sx={{ fontWeight: 600, mb: 1 }}
+                                    >
+                                      {achievement.title}
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      {achievement.description}
+                                    </Typography>
+                                  </Card>
+                                </Grid>
+                              )
+                            )}
+                          </Grid>
+                        </Paper>
+                      )}
+
+                    {/* Growth Trends - Enhanced */}
                     <Paper
                       elevation={2}
                       sx={{
                         p: 4,
                         borderRadius: 4,
-                        bgcolor: alpha(theme.palette.warning.main, 0.02),
+                        bgcolor: alpha(theme.palette.secondary.main, 0.02),
                         border: `1px solid ${alpha(
-                          theme.palette.warning.main,
+                          theme.palette.secondary.main,
                           0.1
                         )}`,
                       }}
@@ -1453,12 +1921,62 @@ function UserProfile() {
                         gutterBottom
                         sx={{ fontWeight: 600, mb: 3 }}
                       >
-                        Growth Overview
+                        📈 Profile Summary
                       </Typography>
-                      <Typography variant="body1" color="text.secondary">
-                        Detailed analytics and growth trends will be available
-                        here in future updates.
-                      </Typography>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ textAlign: "center", p: 2 }}>
+                            <Avatar
+                              sx={{
+                                width: 60,
+                                height: 60,
+                                bgcolor: theme.palette.primary.main,
+                                mx: "auto",
+                                mb: 2,
+                              }}
+                            >
+                              <Typography variant="h4">
+                                {profile?.isVerified ? "✅" : "👤"}
+                              </Typography>
+                            </Avatar>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {profile?.isVerified
+                                ? "Verified Account"
+                                : "Standard Account"}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Account Status
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Box sx={{ p: 2 }}>
+                            <Typography
+                              variant="body1"
+                              color="text.secondary"
+                              paragraph
+                            >
+                              This user has been active since{" "}
+                              {profile?.joinedDate
+                                ? new Date(profile.joinedDate).getFullYear()
+                                : "Unknown"}{" "}
+                              and has built a reputation of{" "}
+                              <strong>
+                                {profile?.reputation?.toLocaleString() || 0}
+                              </strong>{" "}
+                              points.
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Profile completion and engagement metrics suggest{" "}
+                              {profile?.activityStats?.engagementRate &&
+                              profile.activityStats.engagementRate > 10
+                                ? "high community engagement"
+                                : "growing community presence"}
+                              .
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
                     </Paper>
                   </Stack>
                 </Fade>

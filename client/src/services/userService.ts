@@ -214,3 +214,23 @@ export const getRecommendedPosts = async () => {
   });
   return response.data;
 };
+
+export const getUserActivity = async (
+  userId: string,
+  limit = 20,
+  offset = 0
+) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(`${API_URL}/${userId}/activity`, {
+      params: { limit, offset },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error("Error fetching user activity:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch user activity"
+    );
+  }
+};
