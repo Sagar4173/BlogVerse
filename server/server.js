@@ -19,6 +19,107 @@ dotenv.config();
 
 const app = express();
 
+// CORS middleware - MUST be first to handle preflight requests
+// Environment variables needed:
+// - CLIENT_URL: Primary client URL (e.g., https://your-app.vercel.app)
+// - ALLOWED_ORIGINS: Additional comma-separated origins (optional)
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      console.log(`CORS: Request from origin: ${origin}`);
+      console.log(`CORS: NODE_ENV: ${process.env.NODE_ENV}`);
+      console.log(`CORS: CLIENT_URL: ${process.env.CLIENT_URL}`);
+
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        console.log("CORS: Allowing request with no origin");
+        return callback(null, true);
+      }
+
+      // For production, allow origins from environment variable
+      if (process.env.NODE_ENV === "production") {
+        const productionOrigins = [
+          process.env.CLIENT_URL,
+          process.env.ALLOWED_ORIGINS, // Additional allowed origins
+        ].filter(Boolean); // Remove any undefined values
+
+        // If ALLOWED_ORIGINS contains multiple URLs, split them
+        if (process.env.ALLOWED_ORIGINS) {
+          const additionalOrigins = process.env.ALLOWED_ORIGINS.split(",").map(
+            (url) => url.trim()
+          );
+          productionOrigins.push(...additionalOrigins);
+        }
+
+        console.log(
+          `CORS: Checking origin ${origin} against production origins:`,
+          productionOrigins
+        );
+
+        if (productionOrigins.includes(origin)) {
+          console.log("CORS: Production origin allowed");
+          return callback(null, true);
+        }
+      } else {
+        // Development origins - use environment variables or common defaults
+        const developmentOrigins = [];
+
+        // Add CLIENT_URL if specified
+        if (process.env.CLIENT_URL) {
+          developmentOrigins.push(process.env.CLIENT_URL);
+        }
+
+        // Add ALLOWED_ORIGINS if specified
+        if (process.env.ALLOWED_ORIGINS) {
+          const additionalOrigins = process.env.ALLOWED_ORIGINS.split(",").map(
+            (url) => url.trim()
+          );
+          developmentOrigins.push(...additionalOrigins);
+        }
+
+        // If no environment variables are set, allow any origin in development
+        if (developmentOrigins.length === 0) {
+          console.log(
+            "CORS: No environment variables set, allowing any origin in development"
+          );
+          // In development mode, if no specific origins are configured, be permissive
+          return callback(null, true);
+        }
+
+        console.log(
+          `CORS: Checking origin ${origin} against development origins:`,
+          developmentOrigins
+        );
+
+        if (developmentOrigins.includes(origin)) {
+          console.log("CORS: Development origin allowed");
+          return callback(null, true);
+        }
+
+        // In development, be more permissive
+        console.log(`CORS: Allowing origin ${origin} in development mode`);
+        return callback(null, true);
+      }
+
+      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      console.error("CORS: Origin denied -", msg);
+      return callback(new Error(msg), false);
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    credentials: true,
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+    ],
+    exposedHeaders: ["Content-Length", "X-JSON"],
+    optionsSuccessStatus: 200, // For legacy browser support
+    preflightContinue: false,
+  })
+);
+
 // Security middleware
 app.use(
   helmet({
@@ -65,45 +166,13 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("combined"));
 }
 
-// CORS middleware
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-
-      const allowedOrigins =
-        process.env.NODE_ENV === "production"
-          ? [process.env.CLIENT_URL]
-          : [process.env.CLIENT_URL || "http://localhost:3000"];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // In development, be more permissive
-      if (process.env.NODE_ENV === "development") {
-        console.log(`CORS: Allowing origin ${origin} in development mode`);
-        return callback(null, true);
-      }
-
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-      return callback(new Error(msg), false);
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    credentials: true,
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-      "Origin",
-    ],
-    exposedHeaders: ["Content-Length", "X-JSON"],
-    optionsSuccessStatus: 200, // For legacy browser support
-    preflightContinue: false,
-  })
-);
+// Request logging for debugging
+app.use((req, res, next) => {
+  console.log(
+    `${req.method} ${req.path} - Origin: ${req.headers.origin || "none"}`
+  );
+  next();
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
@@ -141,19 +210,96 @@ app.get("/", (req, res) => {
   });
 });
 
+// Add a CORS test endpoint
+app.get("/cors-test", (req, res) => {
+  res.json({
+    message: "CORS test successful",
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Handle preflight requests explicitly
 app.options("*", (req, res) => {
-  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+  const origin = req.headers.origin;
+  console.log(`OPTIONS preflight request from origin: ${origin}`);
+
+  const allowedOrigins =
+    process.env.NODE_ENV === "production"
+      ? [process.env.CLIENT_URL, process.env.ALLOWED_ORIGINS].filter(Boolean)
+      : [];
+
+  // Handle development origins
+  if (process.env.NODE_ENV !== "production") {
+    // Add CLIENT_URL if specified
+    if (process.env.CLIENT_URL) {
+      allowedOrigins.push(process.env.CLIENT_URL);
+    }
+
+    // Add ALLOWED_ORIGINS if specified
+    if (process.env.ALLOWED_ORIGINS) {
+      const additionalOrigins = process.env.ALLOWED_ORIGINS.split(",").map(
+        (url) => url.trim()
+      );
+      allowedOrigins.push(...additionalOrigins);
+    }
+
+    // If no environment variables are set, allow any origin in development
+    if (allowedOrigins.length === 0) {
+      console.log(
+        "OPTIONS: No environment variables set, allowing any origin in development"
+      );
+      // In development mode, if no specific origins are configured, be permissive
+      res.header("Access-Control-Allow-Origin", origin || "*");
+      res.header(
+        "Access-Control-Allow-Methods",
+        "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+      );
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      );
+      res.header("Access-Control-Allow-Credentials", "true");
+      return res.status(200).send();
+    }
+  }
+
+  // If ALLOWED_ORIGINS contains multiple URLs, split them for production
+  if (process.env.NODE_ENV === "production" && process.env.ALLOWED_ORIGINS) {
+    const additionalOrigins = process.env.ALLOWED_ORIGINS.split(",").map(
+      (url) => url.trim()
+    );
+    allowedOrigins.push(...additionalOrigins);
+  }
+
+  console.log(
+    `OPTIONS: Checking origin ${origin} against allowed origins:`,
+    allowedOrigins
   );
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type,Authorization,X-Requested-With,Accept,Origin"
-  );
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.status(200).send();
+
+  // Remove the additional fallback as we're handling it above now
+
+  if (
+    !origin ||
+    allowedOrigins.includes(origin) ||
+    process.env.NODE_ENV === "development"
+  ) {
+    console.log("OPTIONS: Allowing preflight request");
+    res.header("Access-Control-Allow-Origin", origin || allowedOrigins[0]);
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+    );
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+    );
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.status(200).send();
+  } else {
+    console.log("OPTIONS: Denying preflight request");
+    res.status(403).send("CORS not allowed");
+  }
 });
 
 // Track MongoDB connection status

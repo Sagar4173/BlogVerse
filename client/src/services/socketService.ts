@@ -14,7 +14,15 @@ class SocketService {
   }
 
   connect(userId: string) {
-    const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || "https://your-production-api-domain.vercel.app";
+    // Disable socket connections in production since Vercel doesn't support WebSockets
+    if (import.meta.env.PROD) {
+      console.log("Socket.IO disabled in production environment");
+      return null;
+    }
+
+    const API_URL =
+      import.meta.env.VITE_API_URL?.replace("/api", "") ||
+      "http://localhost:5000";
     if (!this.socket) {
       this.socket = io(API_URL, {
         transports: ["websocket", "polling"],

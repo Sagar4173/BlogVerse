@@ -70,16 +70,18 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     if (user?._id) {
       const socket = socketService.connect(user._id);
 
-      socket.on("notification", (newNotification: Notification) => {
-        setNotifications((prev) => [newNotification, ...prev]);
-        toast.info(newNotification.text, {
-          position: "bottom-right",
+      if (socket) {
+        socket.on("notification", (newNotification: Notification) => {
+          setNotifications((prev) => [newNotification, ...prev]);
+          toast.info(newNotification.text, {
+            position: "bottom-right",
+          });
         });
-      });
 
-      return () => {
-        socketService.disconnect();
-      };
+        return () => {
+          socketService.disconnect();
+        };
+      }
     }
   }, [user, setNotifications]);
 

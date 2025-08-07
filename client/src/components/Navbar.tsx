@@ -128,7 +128,12 @@ function Navbar() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
+
+  // Debug logging to track state changes
+  useEffect(() => {
+    console.log("Navbar state - User:", !!user, "Loading:", loading);
+  }, [user, loading]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -239,7 +244,9 @@ function Navbar() {
       hasSubmenu: true,
     },
     { text: "Write", icon: <EditIcon />, to: "/write" },
-    ...(user
+    ...(loading
+      ? [] // Don't show auth-dependent items while loading
+      : user
       ? [
           { text: "Dashboard", icon: <DashboardIcon />, to: "/dashboard" },
           { text: "Profile", icon: <PersonIcon />, to: `/user/${user._id}` },
@@ -638,6 +645,11 @@ function Navbar() {
                       </MenuItem>
                     </Menu>
                   </>
+                ) : loading ? (
+                  // Show loading state while authentication is being restored
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
                 ) : (
                   <>
                     <Button

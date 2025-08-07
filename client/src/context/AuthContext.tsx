@@ -29,6 +29,34 @@ const api = axios.create({
   },
 });
 
+// Utility function to safely get token from localStorage
+const getStoredToken = () => {
+  try {
+    return localStorage.getItem("token");
+  } catch (error) {
+    console.error("Error accessing localStorage:", error);
+    return null;
+  }
+};
+
+// Utility function to safely set token in localStorage
+const setStoredToken = (token: string) => {
+  try {
+    localStorage.setItem("token", token);
+  } catch (error) {
+    console.error("Error setting token in localStorage:", error);
+  }
+};
+
+// Utility function to safely remove token from localStorage
+const removeStoredToken = () => {
+  try {
+    localStorage.removeItem("token");
+  } catch (error) {
+    console.error("Error removing token from localStorage:", error);
+  }
+};
+
 // Add request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
@@ -82,50 +110,104 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem("token")
-  );
+  const [token, setToken] = useState<string | null>(() => {
+    const storedToken = getStoredToken();
+    console.log(
+      "Initial token check:",
+      storedToken ? "Token found" : "No token"
+    );
+    return storedToken;
+  });
   const [isLoadingUser, setIsLoadingUser] = useState(false);
+
+  // Initialize loading state based on whether we have a token
+  const [loading, setLoading] = useState(() => {
+    const storedToken = getStoredToken();
+    return !!storedToken; // Only show loading if we have a token to validate
+  });
 
   // Update axios authorization header when token changes
   useEffect(() => {
     if (token) {
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      console.log("Token set in axios headers");
     } else {
       delete api.defaults.headers.common["Authorization"];
+      console.log("Token removed from axios headers");
     }
   }, [token]);
 
   useEffect(() => {
     const loadUser = async () => {
+      console.log(
+        "LoadUser called - Token:",
+        !!token,
+        "User:",
+        !!user,
+        "Loading:",
+        loading,
+        "IsLoadingUser:",
+        isLoadingUser
+      );
+
+      // If we have a token but no user, and we're not already loading
       if (token && !user && !isLoadingUser) {
         setIsLoadingUser(true);
+        console.log("Attempting to load user from token");
+
         try {
           const res = await api.get("/auth/me");
+          console.log("User loaded successfully");
+
           // Get posts count
-          const statsRes = await api.get("/blogs/dashboard/stats");
-          setUser({
-            ...res.data,
-            postsCount: statsRes.data.totalPosts || 0,
-          });
-        } catch (err) {
+          try {
+            const statsRes = await api.get("/blogs/dashboard/stats");
+            setUser({
+              ...res.data,
+              postsCount: statsRes.data.totalPosts || 0,
+            });
+          } catch (statsError) {
+            // If stats fail, still set user data without posts count
+            console.warn("Failed to load user stats:", statsError);
+            setUser({
+              ...res.data,
+              postsCount: 0,
+            });
+          }
+        } catch (err: any) {
           console.error("Failed to load user:", err);
-          localStorage.removeItem("token");
-          setToken(null);
-          setUser(null);
+
+          // If token is invalid (401), clear it
+          if (err.response?.status === 401) {
+            console.log("Token is invalid, clearing from storage");
+            removeStoredToken();
+            setToken(null);
+            setUser(null);
+          }
         } finally {
           setIsLoadingUser(false);
+          setLoading(false);
         }
       } else if (!token) {
+        // No token, set loading to false immediately
+        console.log("No token found, clearing user state");
         setUser(null);
+        setLoading(false);
+      } else if (token && user) {
+        // We have both token and user, stop loading if still loading
+        if (loading) {
+          console.log("Auth complete, stopping loading state");
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
-    loadUser();
-  }, [token]);
+    // Only run the effect if we need to load user data or update loading state
+    if (loading || (token && !user && !isLoadingUser)) {
+      loadUser();
+    }
+  }, [token, user, loading, isLoadingUser]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -137,7 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       console.log("Login response:", res.data);
       const { token: newToken, user: userData } = res.data;
-      localStorage.setItem("token", newToken);
+      setStoredToken(newToken);
       setToken(newToken);
       setUser(userData);
       setError(null);
@@ -188,7 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // If no verification required, proceed with login
       const { token: newToken, user: userData } = res.data;
-      localStorage.setItem("token", newToken);
+      setStoredToken(newToken);
       setToken(newToken);
       setUser(userData);
       setError(null);
@@ -205,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    removeStoredToken();
     setToken(null);
     setUser(null);
   };
@@ -246,7 +328,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // If verification successful and includes login data
       if (res.data.success && res.data.token) {
         const { token: newToken, user: userData } = res.data;
-        localStorage.setItem("token", newToken);
+        setStoredToken(newToken);
         setToken(newToken);
         setUser(userData);
       }
