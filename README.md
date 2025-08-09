@@ -172,8 +172,8 @@ Read our [Contributing Guidelines](./docs/contributing.md) for detailed informat
 
 BlogVerse is built with ❤️ by:
 
-- [Sagar Wavhal](https://github.com/Sagar4173)
-- [Mrunali Patil](https://github.com/Mrunali394)
+- [Sagar Wavhal](https://github.com/Sagar4173) - Co-founder
+- [Mrunali Patil](https://github.com/Mrunali394) - Co-founder
 
 ## 📄 License
 
